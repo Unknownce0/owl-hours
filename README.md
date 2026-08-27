@@ -39,12 +39,18 @@ put that address in **Sync across your devices**.
 ## Working on it
 
     python3 src/make_icons.py    # regenerate app icons (no dependencies)
+    ./src/verify-build.sh        # check the packaged app is complete before shipping
     python3 build.py             # build index.html + the desktop app's copy
     cd electron && npm start     # run the desktop app
     cd electron && npm run dist  # build .dmg and .exe into ../dist
 
 `src/app.tpl.html` is the only source file for the UI — everything else is generated.
 Never edit `index.html` directly.
+
+**If you add a file under `electron/`, add it to `build.files` in `electron/package.json`.**
+That setting is an allowlist, not a filter: a missing entry produces an installer that
+builds cleanly and then crashes on launch, because the `require()` has nothing to resolve.
+`src/verify-build.sh` exists to catch exactly that — run it after every build.
 
 ## D2L notes
 

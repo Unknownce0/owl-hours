@@ -21,6 +21,9 @@
     },
     "files": [
       "main.js",
+      "preload.js",
+      "d2l.js",
+      "grabber-return.js",
       "app/**/*",
       "build/icon.png"
     ],
