@@ -45,8 +45,7 @@
         }
       ],
       "category": "public.app-category.education",
-      "icon": "build/icon.png",
-      "identity": null
+      "icon": "build/icon.png"
     },
     "dmg": {
       "title": "Owl Hours",
@@ -65,7 +64,8 @@
     },
     "portable": {
       "artifactName": "Owl-Hours-Windows.exe"
-    }
+    },
+    "afterPack": "build/adhoc-sign.js"
   },
   "devDependencies": {
     "electron": "^33.0.0",

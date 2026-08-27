@@ -23,8 +23,18 @@ Installed on a phone, it runs fullscreen and keeps its data indefinitely — unl
 Safari tab, which discards site data after 7 days of not visiting.
 
 There are also downloadable desktop builds under Releases if you'd rather have a `.dmg`
-or `.exe`. They're unsigned, so the first launch needs a right-click → Open on macOS, or
-"More info → Run anyway" on Windows.
+or `.exe`. They carry no Apple or Windows code-signing certificate.
+
+On Windows, click **More info → Run anyway**.
+
+On macOS you'll see *"Owl Hours is damaged and can't be opened"*. It isn't damaged, and
+right-click → Open does **not** get past that particular error. Drag the app to
+Applications and run once:
+
+    xattr -dr com.apple.quarantine "/Applications/Owl Hours.app"
+    codesign --force --deep --sign - "/Applications/Owl Hours.app"
+
+Installing from the browser avoids all of this.
 
 ## Load your classes
 

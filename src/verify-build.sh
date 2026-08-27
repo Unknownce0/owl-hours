@@ -56,6 +56,23 @@ grep -oE "require\('\./[a-zA-Z0-9_-]+'\)" "$OUT/main.js" 2>/dev/null | sed "s/re
 done || FAIL=1
 
 rm -rf "$OUT"
+
+# A bundle carrying the raw Electron binary's signature builds fine and then
+# fails to launch with "is damaged". Check the signature actually matches.
+echo "signature:"
+APP_DIR="$(dirname "$(dirname "$(dirname "$ASAR")")")"
+IDENT=$(codesign -dv "$APP_DIR" 2>&1 | sed -n 's/^Identifier=//p')
+if [ "$IDENT" = "edu.kennesaw.owlhours" ]; then
+  echo "  ok       identifier is $IDENT"
+else
+  echo "  FAIL     identifier is \"$IDENT\" (expected edu.kennesaw.owlhours)"; FAIL=1
+fi
+if codesign --verify --deep --strict "$APP_DIR" 2>/dev/null; then
+  echo "  ok       signature verifies"
+else
+  echo "  FAIL     signature does not verify — macOS will call this damaged"; FAIL=1
+fi
+
 echo
 if [ "$FAIL" -eq 0 ]; then echo "BUILD OK"; else echo "BUILD INCOMPLETE — do not ship"; fi
 exit $FAIL
