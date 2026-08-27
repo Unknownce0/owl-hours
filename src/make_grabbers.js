@@ -42,6 +42,28 @@ for (const [from, to] of swaps) {
 try { new Function('completion', ios); } catch (e) { console.error('SYNTAX ERROR (ios):', e.message); process.exit(1); }
 fs.writeFileSync('grabber-ios-shortcut.js', ios + '\n');
 
+// --- Electron variant: resolve to the JSON instead of drawing a panel -------
+let ret = code.slice(0, a) + 'return out;' + code.slice(b + endMark.length);
+// the outer IIFE has to hand its promise back to executeJavaScript
+const fetchStart = "fetch('/d2l/lp/courseSelector/6629/InitPartial'";
+if (!ret.includes(fetchStart)) { console.error('scrape entry point not found'); process.exit(1); }
+ret = ret.replace(fetchStart, 'return ' + fetchStart);
+const retSwaps = [
+  ["alert('Owl Hours: run this while you are on your D2L page.');return",
+   "return 'ERROR:NOTD2L';"],
+  ["alert('Owl Hours: no courses found. Are you signed in?');return",
+   "return 'ERROR:NOAUTH';"],
+  [".catch(function(e){alert('Owl Hours: '+e)})",
+   ".catch(function(e){return 'ERROR:'+e})"]
+];
+for (const [from, to] of retSwaps) {
+  if (!ret.includes(from)) { console.error('missing exit path (return variant):', from.slice(0, 40)); process.exit(1); }
+  ret = ret.split(from).join(to);
+}
+try { new Function(ret); } catch (e) { console.error('SYNTAX ERROR (return):', e.message); process.exit(1); }
+fs.writeFileSync('electron/grabber-return.js', ret + '\n');
+
+console.log('  electron/grabber-return.js %d chars', ret.length);
 console.log('  grabber-bookmarklet.txt  %d chars', bookmarklet.length);
 console.log('  grabber.js               %d chars', code.length);
 console.log('  grabber-ios-shortcut.js  %d chars  completion() calls: %d  alerts left: %d',

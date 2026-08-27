@@ -222,6 +222,7 @@ details.br kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel);
       <button class="tab" role="tab" data-view="classes" aria-selected="false">Classes</button>
       <button class="tab" role="tab" data-view="grades" aria-selected="false">Grades</button>
     </div>
+    <button class="icon-btn" id="btn-refresh" style="display:none">Refresh</button>
     <button class="icon-btn" data-view="sync">Sync D2L</button>
   </div>
 </div>
@@ -404,10 +405,22 @@ function renderAgenda(){
     document.getElementById("v-agenda").innerHTML =
       '<div class="empty" style="padding:70px 20px">'+
       '<h2 style="font-size:22px;margin-bottom:8px">Nothing loaded yet</h2>'+
-      '<p style="max-width:44ch;margin:0 auto 20px">Owl Hours needs one trip to D2L to pull in your classes. '+
-      'It takes about five seconds, and your coursework stays on this device.</p>'+
-      '<button class="btn" data-view="sync">Get my classes</button></div>';
-    document.querySelector('#v-agenda [data-view]').onclick = function(){ show("sync"); };
+      '<p style="max-width:44ch;margin:0 auto 20px">'+
+      (DESKTOP ? 'Sign in to D2L once and Owl Hours keeps itself up to date from then on. '+
+                 'Your coursework stays on this computer.'
+               : 'Owl Hours needs one trip to D2L to pull in your classes. '+
+                 'It takes about five seconds, and your coursework stays on this device.')+'</p>'+
+      '<button class="btn" id="empty-cta">'+(DESKTOP ? 'Sign in to D2L' : 'Get my classes')+'</button>'+
+      '<p class="sub" id="empty-msg" style="margin-top:14px"></p></div>';
+    document.getElementById("empty-cta").onclick = function(){
+      if(DESKTOP){
+        var m = document.getElementById("empty-msg");
+        desktopGrab(true, function(s){ m.textContent = s; });
+      } else { show("sync"); }
+    };
+    if(DESKTOP) window.owl.onStatus(function(s){
+      var m = document.getElementById("empty-msg"); if(m) m.textContent = s;
+    });
     return;
   }
   var vis = visible();
@@ -693,7 +706,16 @@ function renderSync(){
   h += '<p class="sub" id="safari-warn" style="display:none"><strong>Heads up, Safari:</strong> Safari deletes a site&rsquo;s saved data after 7 days without a visit. If you don&rsquo;t open Owl Hours for a week, your classes and checkmarks will be gone and you&rsquo;ll need to run the grabber again. Opening it every few days is enough to keep it. Chrome and Firefox don&rsquo;t do this.</p>';
   h += '</div></div>';
 
-  h += '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Load your own classes</h3></div><div class="card-b">';
+  if(DESKTOP){
+    h += '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Your D2L sign-in</h3></div><div class="card-b">';
+    h += '<p class="sub" style="padding-top:0">This app keeps its own D2L session, so you sign in once and it refreshes itself '+
+         'from then on &mdash; on launch and every few hours. No bookmarklet needed here.</p>';
+    h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">'+
+         '<button class="btn" id="d-refresh">Refresh from D2L</button>'+
+         '<button class="btn ghost" id="d-signout">Forget my D2L sign-in</button></div>';
+    h += '<p class="sub" id="d-msg"></p></div></div>';
+  }
+  h += '<div class="card" style="margin-top:16px"><div class="card-h"><h3>'+(DESKTOP?'Grabber (for a plain browser)':'Load your own classes')+'</h3></div><div class="card-b">';
   h += '<div class="step"><span class="k">1</span><div><h4>Save the grabber</h4>'+
        '<p>In Chrome, Edge, or Firefox: drag this button onto your bookmarks bar. In Safari, dragging won&rsquo;t work &mdash; follow the Safari steps below instead.</p>'+
        '<a class="bmk" id="bmk" href="#">Grab my D2L</a> <button class="btn ghost" id="copy-code">Copy the code</button>'+
@@ -731,6 +753,15 @@ function renderSync(){
   h += '</div></div></div>';
   document.getElementById("v-sync").innerHTML = h;
 
+  if(DESKTOP){
+    var dm = document.getElementById("d-msg");
+    var dsay = function(s){ if(dm) dm.textContent = s; };
+    window.owl.onStatus(dsay);
+    document.getElementById("d-refresh").onclick = function(){ desktopGrab(true, dsay); };
+    document.getElementById("d-signout").onclick = function(){
+      window.owl.signOut().then(function(){ dsay("Signed out. Press Refresh to sign in again."); });
+    };
+  }
   var su = document.getElementById("sync-url"), sm = document.getElementById("sync-msg");
   function remember(){ sync.url = su.value.trim(); sync.auto = document.getElementById("sync-auto").checked; save(K.sync, sync); }
   su.onchange = remember;
@@ -781,12 +812,63 @@ function renderSync(){
   };
 }
 
+/* ---------- the desktop app can talk to D2L itself ---------- */
+var DESKTOP = !!(window.owl && window.owl.isDesktop);
+
+function applyData(j, note){
+  if(!j || !j.courses || !j.courses.length) return false;
+  if(JSON.stringify(j) === JSON.stringify(DATA)){ if(note) note("Already up to date."); return true; }
+  save(K.data, j);
+  if(note) note("Got "+j.courses.length+" classes. Reloading\u2026");
+  setTimeout(function(){ location.reload(); }, note ? 500 : 0);
+  return true;
+}
+
+function desktopGrab(interactive, note){
+  if(!DESKTOP) return;
+  if(note) note(interactive ? "Opening D2L\u2026" : "Checking D2L\u2026");
+  window.owl.grab(interactive).then(function(res){
+    if(res && res.ok){ applyData(res.data, note); return; }
+    if(res && res.needLogin){
+      if(note) note(interactive ? "Sign-in didn\u2019t finish. Try again." : "You\u2019re signed out of D2L \u2014 press Refresh to sign in.");
+      return;
+    }
+    if(note) note("D2L said: "+((res && res.error) || "something went wrong"));
+  }, function(e){ if(note) note("Couldn\u2019t reach D2L: "+e); });
+}
+
+if(DESKTOP){
+  window.owl.onData(function(j){ applyData(j, null); });
+}
+
 /* ---------- pulling data from a URL ---------- */
+function b64bytes(s){ var b=atob(s), a=new Uint8Array(b.length); for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i); return a; }
+
+/* An encrypted payload looks like {v:1,alg:"AES-GCM",iv,ct}. The key rides in the
+   URL's #k= fragment, which browsers never send to the server, so whoever hosts
+   the file only ever holds ciphertext. */
+function decryptIfNeeded(obj, keyB64){
+  if(!obj || obj.alg !== "AES-GCM") return Promise.resolve(obj);
+  if(!keyB64) return Promise.reject(new Error("this data is encrypted and the address is missing its #k= key"));
+  if(!(window.crypto && window.crypto.subtle)) return Promise.reject(new Error("this browser can't decrypt (needs a secure connection)"));
+  return window.crypto.subtle.importKey("raw", b64bytes(keyB64), "AES-GCM", false, ["decrypt"])
+    .then(function(key){
+      return window.crypto.subtle.decrypt({name:"AES-GCM", iv:b64bytes(obj.iv)}, key, b64bytes(obj.ct));
+    })
+    .then(function(buf){ return JSON.parse(new TextDecoder().decode(buf)); })
+    .catch(function(){ throw new Error("wrong key for this data"); });
+}
+
 function pullSync(silent, say){
   if(!sync.url) return;
-  fetch(sync.url, {cache:"no-store"}).then(function(r){
+  var hash = sync.url.indexOf("#k=");
+  var url  = hash >= 0 ? sync.url.slice(0, hash) : sync.url;
+  var key  = hash >= 0 ? decodeURIComponent(sync.url.slice(hash + 3)) : null;
+  fetch(url, {cache:"no-store"}).then(function(r){
     if(!r.ok) throw new Error("the address returned "+r.status);
     return r.json();
+  }).then(function(raw){
+    return decryptIfNeeded(raw, key);
   }).then(function(j){
     if(!j || !j.courses || !j.courses.length) throw new Error("no classes in that data");
     if(JSON.stringify(j) === JSON.stringify(DATA)){ if(say) say("Already up to date."); return; }
@@ -840,6 +922,17 @@ document.addEventListener("click", function(e){
     renderAgenda();
   }
 });
+
+if(DESKTOP){
+  var rb = document.getElementById("btn-refresh");
+  rb.style.display = "";
+  rb.onclick = function(){
+    var b = this, old = b.textContent;
+    b.textContent = "Refreshing\u2026"; b.disabled = true;
+    desktopGrab(true, function(s){ b.textContent = /Reloading/.test(s) ? "Done" : old; });
+    setTimeout(function(){ b.textContent = old; b.disabled = false; }, 4000);
+  };
+}
 
 show(VIEWS.indexOf(ui.view)>=0 ? ui.view : "agenda");
 if(sync.auto && sync.url) pullSync(true, null);

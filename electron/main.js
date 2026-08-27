@@ -1,5 +1,9 @@
-const { app, BrowserWindow, shell, Menu } = require('electron');
+const { app, BrowserWindow, shell, Menu, ipcMain } = require('electron');
 const path = require('path');
+const d2l = require('./d2l');
+
+let mainWindow = null;
+const REFRESH_EVERY = 6 * 60 * 60 * 1000;   // re-check D2L every six hours
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -12,6 +16,7 @@ function createWindow() {
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     icon: path.join(__dirname, 'build', 'icon.png'),
     webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
@@ -33,6 +38,8 @@ function createWindow() {
     }
   });
 
+  mainWindow = win;
+  win.on('closed', () => { if (mainWindow === win) mainWindow = null; });
   return win;
 }
 
@@ -56,8 +63,35 @@ Menu.setApplicationMenu(Menu.buildFromTemplate([
   { role: 'windowMenu' }
 ]));
 
+const send = (channel, payload) => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload);
+};
+
+ipcMain.handle('owl:grab', async (_e, interactive) => {
+  return d2l.grab(interactive, (text) => send('owl:status', text));
+});
+
+ipcMain.handle('owl:signout', () => d2l.signOut());
+
+/* A quiet attempt on launch, then on a timer. If the session has lapsed we say
+   nothing and wait for the user to ask — no surprise login windows. */
+async function refreshQuietly() {
+  const res = await d2l.grab(false);
+  if (process.env.OWL_DEBUG) {
+    console.log('[owl] quiet refresh ->', JSON.stringify({
+      ok: res.ok, needLogin: !!res.needLogin, error: res.error || null,
+      courses: res.ok ? res.data.courses.length : 0
+    }));
+  }
+  if (res.ok) send('owl:data', res.data);
+}
+
 app.whenReady().then(() => {
-  createWindow();
+  const win = createWindow();
+  win.webContents.once('did-finish-load', () => {
+    setTimeout(refreshQuietly, 1500);
+    setInterval(refreshQuietly, REFRESH_EVERY);
+  });
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
