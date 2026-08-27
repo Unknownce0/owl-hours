@@ -75,5 +75,10 @@ Discussion topics carry no due dates — they're forums.
   than calling `navigator.clipboard` directly. Safari drops the bookmarklet click's user
   activation across the ~30 awaited fetches, so a direct clipboard write always rejects;
   the panel's button is a fresh gesture and `document.execCommand('copy')` works there.
-- Safari cannot install a bookmarklet by dragging, and strips `javascript:` pasted into
+- Safari cannot install a bookmarklet by dragging, and refuses `javascript:` pasted into
   the address bar. It has to go in through Bookmarks → Edit Bookmarks → Edit Address.
+- Safari also blocks bookmarklets started from the address bar, with *"Safari doesn't
+  allow JavaScript from the Smart Search field."* That error means the bookmark is
+  intact — it was just invoked from the wrong place. Click the button on the Favorites
+  Bar directly, and turn on Settings → Advanced → "Show features for web developers",
+  then Developer → "Allow JavaScript from Smart Search field".
