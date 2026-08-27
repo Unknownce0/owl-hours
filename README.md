@@ -40,6 +40,8 @@ put that address in **Sync across your devices**.
 
     python3 src/make_icons.py    # regenerate app icons (no dependencies)
     ./src/verify-build.sh        # check the packaged app is complete before shipping
+    ./src/release.sh             # rebuild, push, redeploy the site
+    ./src/release.sh v1.0.1      # ...and publish new installers under that version
     python3 build.py             # build index.html + the desktop app's copy
     cd electron && npm start     # run the desktop app
     cd electron && npm run dist  # build .dmg and .exe into ../dist
