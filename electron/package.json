@@ -1,0 +1,37 @@
+{
+  "name": "owl-hours",
+  "productName": "Owl Hours",
+  "version": "1.0.0",
+  "description": "Your Kennesaw State coursework in one place.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist": "electron-builder --mac --win"
+  },
+  "build": {
+    "appId": "edu.kennesaw.owlhours",
+    "productName": "Owl Hours",
+    "copyright": "Owl Hours",
+    "directories": { "output": "../dist", "buildResources": "build" },
+    "files": ["main.js", "app/**/*", "build/icon.png"],
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
+      "category": "public.app-category.education",
+      "icon": "build/icon.png",
+      "identity": null
+    },
+    "dmg": { "title": "Owl Hours" },
+    "win": {
+      "target": [{ "target": "portable", "arch": ["x64"] }],
+      "icon": "build/icon.png"
+    },
+    "portable": { "artifactName": "Owl-Hours-Windows.exe" }
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  }
+}

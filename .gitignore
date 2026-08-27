@@ -1,0 +1,9 @@
+# your own D2L data never goes in the public repo
+private/
+
+# build output and deps
+node_modules/
+electron/node_modules/
+electron/app/
+dist/
+.DS_Store

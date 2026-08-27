@@ -1,0 +1,876 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Your Kennesaw State coursework in one place.">
+<meta name="theme-color" content="#14130F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Owl Hours">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.json">
+<style>
+  /* keep content clear of the notch / home indicator when installed */
+  body { padding: env(safe-area-inset-top) env(safe-area-inset-right)
+                  env(safe-area-inset-bottom) env(safe-area-inset-left); }
+</style>
+</head>
+<body>
+<title>Owl Hours</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --bg:#FAF8F2; --panel:#FFFFFF; --panel-2:#F3EFE4; --panel-3:#EDE8DA;
+  --ink:#1A1813; --muted:#6B6558; --faint:#958E7D; --line:#E5DFD1;
+  --gold:#9A7400; --gold-ink:#6E5300; --gold-soft:rgba(154,116,0,.13);
+  --red:#A93A2A; --red-soft:rgba(169,58,42,.10);
+  --green:#3B7A56; --green-soft:rgba(59,122,86,.12);
+  --c1:#3F6D9E; --c2:#6C5CA8; --c3:#2F7D63; --c4:#A05C86; --c5:#8A6E2A; --c6:#4A6E78;
+  --shadow:0 1px 2px rgba(26,24,19,.05), 0 8px 24px -12px rgba(26,24,19,.16);
+  --r:10px;
+  --display:"Familjen Grotesk", "Trebuchet MS", sans-serif;
+  --body:"IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14130F; --panel:#1D1B16; --panel-2:#25221B; --panel-3:#2E2A21;
+    --ink:#F2EDE0; --muted:#A79E8A; --faint:#7B7466; --line:#332F25;
+    --gold:#E8B33E; --gold-ink:#F0C86F; --gold-soft:rgba(232,179,62,.16);
+    --red:#E2705C; --red-soft:rgba(226,112,92,.15);
+    --green:#6FBF8E; --green-soft:rgba(111,191,142,.15);
+    --c1:#7FAAD8; --c2:#A796E0; --c3:#6BC49E; --c4:#D492BA; --c5:#C9A857; --c6:#85AEB8;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14130F; --panel:#1D1B16; --panel-2:#25221B; --panel-3:#2E2A21;
+  --ink:#F2EDE0; --muted:#A79E8A; --faint:#7B7466; --line:#332F25;
+  --gold:#E8B33E; --gold-ink:#F0C86F; --gold-soft:rgba(232,179,62,.16);
+  --red:#E2705C; --red-soft:rgba(226,112,92,.15);
+  --green:#6FBF8E; --green-soft:rgba(111,191,142,.15);
+  --c1:#7FAAD8; --c2:#A796E0; --c3:#6BC49E; --c4:#D492BA; --c5:#C9A857; --c6:#85AEB8;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.6);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--gold-ink)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:4px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ---------- top bar ---------- */
+.bar{position:sticky;top:0;z-index:40;background:var(--panel);border-bottom:1px solid var(--line)}
+.bar-in{max-width:1180px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
+.brand h1{font-size:20px;font-weight:700}
+.brand .term{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.tabs{display:flex;gap:2px;background:var(--panel-2);padding:3px;border-radius:var(--r)}
+.tab{border:0;background:transparent;padding:7px 13px;border-radius:7px;font-size:13.5px;font-weight:500;color:var(--muted);cursor:pointer}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1);font-weight:600}
+.icon-btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 11px;font-size:13px;cursor:pointer;color:var(--muted);white-space:nowrap}
+.icon-btn:hover{border-color:var(--gold);color:var(--ink)}
+
+/* ---------- layout ---------- */
+.wrap{max-width:1180px;margin:0 auto;padding:22px 18px 80px}
+.cols{display:grid;grid-template-columns:1fr 288px;gap:26px;align-items:start}
+@media (max-width:900px){.cols{grid-template-columns:1fr}.rail{order:-1}}
+.rail{display:flex;flex-direction:column;gap:16px;position:sticky;top:78px}
+@media (max-width:900px){.rail{position:static}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.card-h{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.card-h h3{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--faint);font-weight:600}
+.card-b{padding:14px 16px}
+
+/* ---------- stat tiles ---------- */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 13px;position:relative;overflow:hidden}
+.tile .n{font-family:var(--mono);font-size:26px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile .l{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.3}
+.tile.crit{background:var(--red-soft);border-color:transparent}
+.tile.crit .n{color:var(--red)}
+.tile.warn{background:var(--gold-soft);border-color:transparent}
+.tile.warn .n{color:var(--gold)}
+
+/* ---------- agenda ---------- */
+.bucket{margin-bottom:26px}
+.bucket-h{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.bucket-h h2{font-size:14px;font-weight:600}
+.bucket-h .cnt{font-family:var(--mono);font-size:11px;color:var(--faint);background:var(--panel-2);padding:1px 7px;border-radius:20px}
+.bucket-h .rule{flex:1;height:1px;background:var(--line)}
+.bucket.is-overdue .bucket-h h2{color:var(--red)}
+.bucket.is-now .bucket-h h2{color:var(--gold)}
+
+.rows{display:flex;flex-direction:column;gap:7px}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--stripe,var(--line));border-radius:var(--r);padding:11px 14px 11px 12px;transition:border-color .12s,transform .12s}
+.row:hover{border-color:var(--line);border-left-color:var(--stripe,var(--line));transform:translateX(1px)}
+.row.done{opacity:.45}
+.row.done .r-name{text-decoration:line-through}
+.chk{width:18px;height:18px;border:1.5px solid var(--line);border-radius:5px;background:transparent;cursor:pointer;display:grid;place-items:center;padding:0;flex:0 0 auto}
+.chk:hover{border-color:var(--green)}
+.chk[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:#fff}
+.chk svg{width:11px;height:11px;display:none}
+.chk[aria-pressed="true"] svg{display:block}
+.r-main{min-width:0}
+.r-name{font-size:14.5px;font-weight:500;overflow-wrap:anywhere}
+.r-name a{color:inherit;text-decoration:none}
+.r-name a:hover{color:var(--gold-ink);text-decoration:underline}
+.r-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:4px}
+.r-when{text-align:right;flex:0 0 auto}
+.r-when .abs{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
+.r-when .rel{font-family:var(--mono);font-size:11px;color:var(--faint);white-space:nowrap;margin-top:2px}
+.r-when .rel.hot{color:var(--gold);font-weight:600}
+.r-when .rel.late{color:var(--red);font-weight:600}
+
+.pill{font-size:10.5px;font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:var(--panel-2);color:var(--muted);white-space:nowrap}
+.pill.course{background:transparent;border:1px solid currentColor;font-weight:500}
+.pill.pts{background:var(--panel-2);color:var(--muted)}
+.pill.stale{background:var(--gold-soft);color:var(--gold)}
+.pill.miss{background:var(--red-soft);color:var(--red)}
+.pill.todo{background:var(--gold-soft);color:var(--gold)}
+.dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+
+/* ---------- filters ---------- */
+.filters{display:flex;flex-direction:column;gap:7px}
+.fchip{display:flex;align-items:center;gap:9px;padding:6px 9px;border-radius:8px;border:1px solid transparent;background:transparent;cursor:pointer;text-align:left;width:100%;font-size:13px;color:var(--muted)}
+.fchip:hover{background:var(--panel-2)}
+.fchip[aria-pressed="true"]{color:var(--ink);font-weight:500}
+.fchip[aria-pressed="false"]{opacity:.4}
+.fchip .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fchip .ct{font-family:var(--mono);font-size:11px;color:var(--faint)}
+
+.toggles{display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted)}
+.toggles label{display:flex;align-items:center;gap:8px;cursor:pointer}
+.toggles input{accent-color:var(--gold);width:15px;height:15px}
+
+/* ---------- add todo ---------- */
+.addbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.addbar input[type=text]{flex:1;min-width:170px}
+.inp{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:13.5px}
+.inp:focus{border-color:var(--gold);outline:none}
+.btn{background:var(--ink);color:var(--bg);border:0;border-radius:8px;padding:8px 15px;font-size:13.5px;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--gold);color:#fff}
+.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.btn.ghost:hover{background:var(--panel-2);color:var(--ink)}
+
+/* ---------- calendar ---------- */
+.cal-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.cal-top h2{font-size:19px;font-weight:600;min-width:180px}
+.grid-scroll{overflow-x:auto}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(112px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.cal .dow{background:var(--panel-2);padding:7px 9px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);text-align:center}
+.day{background:var(--panel);min-height:104px;padding:6px 7px;display:flex;flex-direction:column;gap:3px;cursor:pointer;border:0;text-align:left;font:inherit;color:inherit}
+.day:hover{background:var(--panel-2)}
+.day.out{background:var(--bg);opacity:.5}
+.day.sel{background:var(--gold-soft)}
+.day .dn{font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500}
+.day.today .dn{background:var(--gold);color:#fff;border-radius:50%;width:21px;height:21px;display:grid;place-items:center;font-weight:600}
+.ev{font-size:10.5px;padding:2px 5px;border-radius:4px;background:var(--panel-2);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:2.5px solid var(--stripe)}
+.ev.late{background:var(--red-soft)}
+.more{font-family:var(--mono);font-size:10px;color:var(--faint);padding-left:4px}
+.daydetail{margin-top:16px}
+
+/* ---------- classes ---------- */
+.cls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
+.cls-h{padding:14px 16px;border-bottom:1px solid var(--line);border-top:3px solid var(--stripe);border-radius:var(--r) var(--r) 0 0}
+.cls-h h3{font-size:15.5px;font-weight:600;text-transform:none;letter-spacing:-.01em;color:var(--ink)}
+.cls-h .code{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:3px}
+.cls-b{padding:6px 16px 14px}
+.mini{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+.mini:last-child{border-bottom:0}
+.mini .mn{min-width:0;overflow-wrap:anywhere}
+.mini .md{font-family:var(--mono);font-size:11px;color:var(--faint);white-space:nowrap}
+.sub{font-size:12.5px;color:var(--muted);padding:8px 0}
+
+/* ---------- grades ---------- */
+.gr-head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;padding:14px 16px;border-top:3px solid var(--stripe);border-bottom:1px solid var(--line)}
+.gr-head h3{font-size:15.5px;font-weight:600;flex:1;min-width:180px}
+.gr-score{text-align:right}
+.gr-score .pc{font-family:var(--mono);font-size:27px;font-weight:600;line-height:1}
+.gr-score .lt{font-size:11px;color:var(--faint);font-family:var(--mono);letter-spacing:.06em;margin-top:3px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:6px 10px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
+.score-in{width:64px;text-align:right;background:var(--panel-2);border:1px solid transparent;border-radius:6px;padding:3px 7px;font-family:var(--mono);font-size:13px}
+.score-in:focus{border-color:var(--gold);background:var(--panel);outline:none}
+.score-in.filled{background:var(--gold-soft);color:var(--gold-ink);font-weight:600}
+.note{font-size:12px;color:var(--muted);background:var(--panel-2);border-radius:8px;padding:9px 12px;margin:12px 16px 14px;line-height:1.45}
+
+/* ---------- sync ---------- */
+.sync{max-width:720px}
+.step{display:grid;grid-template-columns:26px 1fr;gap:13px;margin-bottom:20px}
+.step .k{font-family:var(--mono);font-size:12px;color:var(--gold);border:1px solid var(--gold);border-radius:50%;width:24px;height:24px;display:grid;place-items:center;font-weight:600}
+.step h4{font-size:14px;font-weight:600;margin-bottom:4px}
+.step p{margin:0 0 9px;font-size:13.5px;color:var(--muted);max-width:62ch}
+.bmk{display:inline-block;background:var(--gold);color:#fff;border-radius:8px;padding:8px 15px;font-weight:600;font-size:13.5px;text-decoration:none;cursor:grab}
+textarea.inp{width:100%;min-height:96px;font-family:var(--mono);font-size:11.5px;resize:vertical}
+.stat{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-family:var(--mono)}
+details.br{border:1px solid var(--line);border-radius:8px;margin-top:9px;background:var(--panel-2)}
+details.br summary{cursor:pointer;padding:8px 12px;font-size:13px;font-weight:500;list-style:none}
+details.br summary::-webkit-details-marker{display:none}
+details.br summary:before{content:'\25B8';display:inline-block;margin-right:8px;color:var(--gold);transition:transform .15s}
+details.br[open] summary:before{transform:rotate(90deg)}
+details.br .bd{padding:2px 12px 12px 12px;font-size:13px;color:var(--muted);line-height:1.55}
+details.br ol{margin:0;padding-left:19px}
+details.br li{margin-bottom:5px}
+details.br kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+.empty{text-align:center;padding:44px 20px;color:var(--faint)}
+.empty p{margin:6px 0 0;font-size:13.5px}
+.hidden{display:none !important}
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+
+<div class="bar">
+  <div class="bar-in">
+    <div class="brand">
+      <h1>Owl Hours</h1>
+      <span class="term">Fall 2026 &middot; Kennesaw State</span>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-view="agenda" aria-selected="true">Agenda</button>
+      <button class="tab" role="tab" data-view="calendar" aria-selected="false">Calendar</button>
+      <button class="tab" role="tab" data-view="classes" aria-selected="false">Classes</button>
+      <button class="tab" role="tab" data-view="grades" aria-selected="false">Grades</button>
+    </div>
+    <button class="icon-btn" data-view="sync">Sync D2L</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div id="v-agenda"></div>
+  <div id="v-calendar" class="hidden"></div>
+  <div id="v-classes" class="hidden"></div>
+  <div id="v-grades" class="hidden"></div>
+  <div id="v-sync" class="hidden"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+var DEFAULT_DATA = null;
+
+/* Fall 2026 term window. Anything due outside this is a leftover from a
+   copied-forward course shell, not something you actually owe. */
+var TERM_START = new Date(2026,7,1).getTime();
+var TERM_END   = new Date(2027,0,15).getTime();
+
+var K = {data:"owlhours.data.v1", done:"owlhours.done.v1", todos:"owlhours.todos.v1",
+         whatif:"owlhours.whatif.v1", ui:"owlhours.ui.v1", sync:"owlhours.sync.v1"};
+
+function load(k,f){ try{ var s=localStorage.getItem(k); return s?JSON.parse(s):f; }catch(e){ return f; } }
+function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+
+var stored   = load(K.data,null);
+var DATA     = stored || DEFAULT_DATA || {v:1,courses:[]};
+var isCustom = !!stored;
+var isEmpty  = !DATA.courses || !DATA.courses.length;
+var sync     = load(K.sync,{url:"",auto:false});
+var done     = load(K.done,{});
+var todos    = load(K.todos,[]);
+var whatif   = load(K.whatif,{});
+var ui       = load(K.ui,{view:"agenda",hideDone:false,hideStale:false,off:{}});
+if(!ui.off) ui.off={};
+
+var TYPE = {a:"assignment", q:"quiz", d:"discussion"};
+var esc = function(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); };
+
+/* ---------- shaping the raw D2L dump into things with dates and identity ---------- */
+function courseCode(t){
+  var m = t.match(/\b([A-Z]{2,4})\s?(\d{4}[A-Z]?)\b/);
+  if(m) return m[1]+" "+m[2];
+  var w = t.replace(/\b(Section|Group|XLS|Lab|Fall|Semester|CO)\b/g,"").trim().split(/\s+/);
+  return w.slice(0,2).join(" ").toUpperCase();
+}
+function courseName(t){
+  return t.replace(/\s+Section\s+\w+/,"").replace(/\s+XLS\s+Group(\s+\w+)?/,"")
+          .replace(/\s+Lab\b/," Lab").replace(/\s+CSE\s?\d{4}[A-Z]?/,"").trim();
+}
+var courses = (DATA.courses||[]).map(function(c,i){
+  return { id:c.id, raw:c.title, name:courseName(c.title), code:c.code||courseCode(c.title),
+           color:"var(--c"+((i%6)+1)+")", idx:i, grades:c.grades||[] };
+});
+var byId = {}; courses.forEach(function(c){ byId[c.id]=c; });
+
+var items = [];
+(DATA.courses||[]).forEach(function(c){
+  (c.items||[]).forEach(function(it){
+    var due = it.d ? new Date(it.d) : null;
+    var t   = TYPE[it.t] || "item";
+    items.push({
+      key: c.id+"|"+it.t+"|"+it.n,
+      course: c.id, type: t, name: it.n,
+      due: due, opens: it.o?new Date(it.o):null,
+      url: it.u ? "https://kennesaw.view.usg.edu"+it.u : null,
+      status: it.s||null, points: (it.p!=null?it.p:null),
+      attempts: it.at, maxAttempts: it.am, section: it.sec||null,
+      stale: !!(due && (due.getTime()<TERM_START || due.getTime()>TERM_END)),
+      todo:false
+    });
+  });
+});
+function allItems(){
+  return items.concat(todos.map(function(t){
+    return { key:"todo|"+t.id, course:t.course||"", type:"todo", name:t.name,
+             due:t.due?new Date(t.due):null, opens:null, url:null, status:null,
+             points:null, stale:false, todo:true, tid:t.id };
+  }));
+}
+
+/* ---------- time ---------- */
+var now = new Date();
+function sod(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime(); }
+var TODAY = sod(now);
+var DAY = 864e5;
+function daysOut(d){ return Math.round((sod(d)-TODAY)/DAY); }
+function fmtDate(d){
+  return d.toLocaleDateString(undefined,{month:"short",day:"numeric"}) +
+    (d.getFullYear()!==2026 ? ", "+d.getFullYear() : "");
+}
+function fmtTime(d){
+  var h=d.getHours(), m=d.getMinutes();
+  if(h===23&&m>=58) return "11:59p";
+  return d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}).replace(/\s?([AP])M/i,function(_,a){return a.toLowerCase();});
+}
+function relative(d){
+  var n = daysOut(d);
+  if(n===0){
+    var hrs = Math.round((d.getTime()-now.getTime())/36e5);
+    if(hrs<0) return {t:"overdue",c:"late"};
+    if(hrs<=1) return {t:"< 1 hr",c:"late"};
+    return {t:"in "+hrs+" hr",c:"hot"};
+  }
+  if(n<0)  return {t:Math.abs(n)+"d ago", c:"late"};
+  if(n===1) return {t:"tomorrow", c:"hot"};
+  if(n<=7) return {t:"in "+n+"d", c:"hot"};
+  return {t:"in "+n+"d", c:""};
+}
+
+/* ---------- filtering ---------- */
+function visible(){
+  return allItems().filter(function(it){
+    if(it.course && ui.off[it.course]) return false;
+    if(ui.hideDone && done[it.key]) return false;
+    return true;
+  });
+}
+function bucketOf(it){
+  if(it.stale) return "stale";
+  if(!it.due)  return "undated";
+  var n = daysOut(it.due);
+  if(it.due.getTime() < now.getTime() && n<=0) return "overdue";
+  if(n===0) return "today";
+  if(n===1) return "tomorrow";
+  if(n<=7)  return "week";
+  return "later";
+}
+var BUCKETS = [
+  {k:"overdue",  label:"Overdue",             cls:"is-overdue"},
+  {k:"today",    label:"Today",               cls:"is-now"},
+  {k:"tomorrow", label:"Tomorrow",            cls:"is-now"},
+  {k:"week",     label:"Next 7 days",         cls:""},
+  {k:"later",    label:"Later this term",     cls:""},
+  {k:"undated",  label:"No due date in D2L",  cls:""},
+  {k:"stale",    label:"Check these dates",   cls:""}
+];
+
+/* ---------- row rendering ---------- */
+function pill(txt,cls,style){ return '<span class="pill '+(cls||"")+'"'+(style?' style="'+style+'"':"")+'>'+esc(txt)+'</span>'; }
+
+function rowHTML(it){
+  var c = byId[it.course];
+  var isDone = !!done[it.key];
+  var stripe = it.todo ? "var(--gold)" : (c?c.color:"var(--line)");
+  var h = '<div class="row'+(isDone?" done":"")+'" style="--stripe:'+stripe+'">';
+  h += '<button class="chk" aria-pressed="'+isDone+'" data-check="'+esc(it.key)+'" aria-label="Mark '+esc(it.name)+' done">'+
+       '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 6.2 4.4 9.2 10.5 2.8"/></svg></button>';
+  h += '<div class="r-main"><div class="r-name">'+
+       (it.url?'<a href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.name)+'</a>':esc(it.name))+
+       '</div><div class="r-meta">';
+  if(c) h += '<span class="pill course" style="color:'+c.color+'">'+esc(c.code)+'</span>';
+  h += pill(it.todo?"my task":it.type);
+  if(it.points!=null) h += pill(it.points+" pts","pts");
+  if(it.status && /Not Submitted/i.test(it.status)) h += pill("not submitted","miss");
+  if(it.maxAttempts) h += pill(it.attempts+"/"+it.maxAttempts+" attempts","pts");
+  if(it.stale) h += pill("date looks stale","stale");
+  h += '</div></div>';
+  h += '<div class="r-when">';
+  if(it.due){
+    var r = relative(it.due);
+    h += '<div class="abs mono">'+fmtDate(it.due)+' &middot; '+fmtTime(it.due)+'</div>';
+    h += '<div class="rel mono '+(it.stale?"":r.c)+'">'+(it.stale?"from a past term":r.t)+'</div>';
+  } else {
+    h += '<div class="rel mono">no date</div>';
+  }
+  h += '</div></div>';
+  if(it.todo) h = h.replace('</div>\n','</div>');
+  return h;
+}
+
+/* ---------- agenda ---------- */
+function renderAgenda(){
+  if(isEmpty){
+    document.getElementById("v-agenda").innerHTML =
+      '<div class="empty" style="padding:70px 20px">'+
+      '<h2 style="font-size:22px;margin-bottom:8px">Nothing loaded yet</h2>'+
+      '<p style="max-width:44ch;margin:0 auto 20px">Owl Hours needs one trip to D2L to pull in your classes. '+
+      'It takes about five seconds, and your coursework stays on this device.</p>'+
+      '<button class="btn" data-view="sync">Get my classes</button></div>';
+    document.querySelector('#v-agenda [data-view]').onclick = function(){ show("sync"); };
+    return;
+  }
+  var vis = visible();
+  var groups = {}; BUCKETS.forEach(function(b){ groups[b.k]=[]; });
+  vis.forEach(function(it){ var b=bucketOf(it); if(groups[b]) groups[b].push(it); });
+  Object.keys(groups).forEach(function(k){
+    groups[k].sort(function(a,b){
+      if(!a.due) return 1; if(!b.due) return -1;
+      return a.due-b.due;
+    });
+  });
+
+  var live = vis.filter(function(i){ return !i.stale && !done[i.key]; });
+  var overdue = groups.overdue.filter(function(i){ return !done[i.key]; }).length;
+  var wk = live.filter(function(i){ var n=i.due?daysOut(i.due):null; return n!=null && n>=0 && n<=7; }).length;
+  var unsub = vis.filter(function(i){ return i.status && /Not Submitted/i.test(i.status) && !done[i.key]; }).length;
+  var staleN = vis.filter(function(i){ return i.stale; }).length;
+
+  var body = '';
+  body += '<div class="addbar">';
+  body += '<input class="inp" type="text" id="td-name" placeholder="Add your own &mdash; readings, study blocks, anything D2L doesn&rsquo;t track">';
+  body += '<select class="inp" id="td-course"><option value="">No class</option>'+
+          courses.map(function(c){ return '<option value="'+c.id+'">'+esc(c.code)+'</option>'; }).join('')+'</select>';
+  body += '<input class="inp" type="date" id="td-due">';
+  body += '<button class="btn" id="td-add">Add</button></div>';
+
+  var any = false;
+  BUCKETS.forEach(function(b){
+    var g = groups[b.k];
+    if(ui.hideStale && b.k==="stale") return;
+    if(!g.length) return;
+    any = true;
+    body += '<section class="bucket '+b.cls+'"><div class="bucket-h"><h2>'+b.label+'</h2>'+
+            '<span class="cnt mono">'+g.length+'</span><span class="rule"></span></div>'+
+            '<div class="rows">'+g.map(rowHTML).join('')+'</div></section>';
+  });
+  if(!any) body += '<div class="empty"><h2>Nothing matches</h2><p>Every class is filtered out, or you&rsquo;ve checked it all off.</p></div>';
+
+  var rail = '';
+  rail += '<div class="tiles">'+
+    tile(wk, wk===1?"due in the next 7 days":"due in the next 7 days", wk>0?"warn":"")+
+    tile(overdue, overdue===1?"overdue item":"overdue items", overdue>0?"crit":"")+
+    tile(unsub,"marked not submitted","")+
+    tile(staleN,"dates to verify","")+
+  '</div>';
+
+  rail += '<div class="card"><div class="card-h"><h3>Classes</h3></div><div class="card-b"><div class="filters">'+
+    courses.map(function(c){
+      var n = allItems().filter(function(i){ return i.course===c.id && !i.stale && !done[i.key]; }).length;
+      var on = !ui.off[c.id];
+      return '<button class="fchip" aria-pressed="'+on+'" data-filter="'+c.id+'">'+
+             '<span class="dot" style="background:'+c.color+'"></span>'+
+             '<span class="nm">'+esc(c.name)+'</span><span class="ct mono">'+n+'</span></button>';
+    }).join('')+'</div></div></div>';
+
+  rail += '<div class="card"><div class="card-h"><h3>View</h3></div><div class="card-b"><div class="toggles">'+
+    '<label><input type="checkbox" id="t-done"'+(ui.hideDone?" checked":"")+'> Hide completed</label>'+
+    '<label><input type="checkbox" id="t-stale"'+(ui.hideStale?" checked":"")+'> Hide stale dates</label>'+
+    '</div></div></div>';
+
+  document.getElementById("v-agenda").innerHTML =
+    '<div class="cols"><div>'+body+'</div><aside class="rail">'+rail+'</aside></div>';
+
+  var add = document.getElementById("td-add");
+  if(add) add.onclick = addTodo;
+  var nm = document.getElementById("td-name");
+  if(nm) nm.onkeydown = function(e){ if(e.key==="Enter") addTodo(); };
+  var td=document.getElementById("t-done"); if(td) td.onchange=function(){ ui.hideDone=this.checked; save(K.ui,ui); renderAgenda(); };
+  var ts=document.getElementById("t-stale"); if(ts) ts.onchange=function(){ ui.hideStale=this.checked; save(K.ui,ui); renderAgenda(); };
+}
+function tile(n,label,cls){
+  return '<div class="tile '+cls+'"><div class="n">'+n+'</div><div class="l">'+esc(label)+'</div></div>';
+}
+function addTodo(){
+  var n = document.getElementById("td-name");
+  if(!n || !n.value.trim()) return;
+  var d = document.getElementById("td-due").value;
+  todos.push({ id:Date.now().toString(36), name:n.value.trim(),
+               course:document.getElementById("td-course").value,
+               due: d ? new Date(d+"T23:59:00").toISOString() : null });
+  save(K.todos,todos);
+  n.value=""; document.getElementById("td-due").value="";
+  renderAgenda();
+}
+
+/* ---------- calendar ---------- */
+var calM = now.getMonth(), calY = now.getFullYear(), calSel = null;
+function renderCalendar(){
+  var vis = visible().filter(function(i){ return i.due && !i.stale; });
+  var map = {};
+  vis.forEach(function(i){ var k=sod(i.due); (map[k]=map[k]||[]).push(i); });
+
+  var first = new Date(calY,calM,1);
+  var start = new Date(calY,calM,1 - first.getDay());
+  var dows = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+  var h = '<div class="cal-top">'+
+    '<h2>'+first.toLocaleDateString(undefined,{month:"long",year:"numeric"})+'</h2>'+
+    '<button class="icon-btn" id="c-prev" aria-label="Previous month">&larr;</button>'+
+    '<button class="icon-btn" id="c-today">Today</button>'+
+    '<button class="icon-btn" id="c-next" aria-label="Next month">&rarr;</button></div>';
+
+  h += '<div class="grid-scroll"><div class="cal">'+dows.map(function(d){ return '<div class="dow">'+d+'</div>'; }).join('');
+  for(var w=0; w<6; w++){
+    for(var d=0; d<7; d++){
+      var cur = new Date(start.getFullYear(),start.getMonth(),start.getDate()+w*7+d);
+      var key = sod(cur), evs = map[key]||[];
+      var cls = "day" + (cur.getMonth()!==calM?" out":"") + (key===TODAY?" today":"") + (key===calSel?" sel":"");
+      h += '<button class="'+cls+'" data-day="'+key+'"><span class="dn">'+cur.getDate()+'</span>';
+      evs.slice(0,3).forEach(function(e){
+        var c = byId[e.course];
+        h += '<span class="ev'+(key<TODAY&&!done[e.key]?" late":"")+'" style="--stripe:'+(e.todo?"var(--gold)":(c?c.color:"var(--line)"))+'">'+esc(e.name)+'</span>';
+      });
+      if(evs.length>3) h += '<span class="more mono">+'+(evs.length-3)+' more</span>';
+      h += '</button>';
+    }
+  }
+  h += '</div></div>';
+
+  if(calSel && map[calSel]){
+    var sd = new Date(calSel);
+    h += '<div class="daydetail"><div class="bucket-h"><h2>'+
+         sd.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})+
+         '</h2><span class="cnt mono">'+map[calSel].length+'</span><span class="rule"></span></div>'+
+         '<div class="rows">'+map[calSel].sort(function(a,b){return a.due-b.due;}).map(rowHTML).join('')+'</div></div>';
+  } else {
+    h += '<p class="sub" style="margin-top:14px">Pick a day to see everything due on it.</p>';
+  }
+
+  document.getElementById("v-calendar").innerHTML = h;
+  document.getElementById("c-prev").onclick = function(){ calM--; if(calM<0){calM=11;calY--;} calSel=null; renderCalendar(); };
+  document.getElementById("c-next").onclick = function(){ calM++; if(calM>11){calM=0;calY++;} calSel=null; renderCalendar(); };
+  document.getElementById("c-today").onclick = function(){ calM=now.getMonth(); calY=now.getFullYear(); calSel=TODAY; renderCalendar(); };
+  Array.prototype.forEach.call(document.querySelectorAll("[data-day]"), function(b){
+    b.onclick = function(){ calSel = +this.getAttribute("data-day"); renderCalendar(); };
+  });
+}
+
+/* ---------- classes ---------- */
+function renderClasses(){
+  var all = allItems();
+  var h = '<div class="cls-grid">';
+  courses.forEach(function(c){
+    var mine = all.filter(function(i){ return i.course===c.id; });
+    var live = mine.filter(function(i){ return !i.stale && i.due; }).sort(function(a,b){ return a.due-b.due; });
+    var undated = mine.filter(function(i){ return !i.due && !i.stale; });
+    var stale = mine.filter(function(i){ return i.stale; });
+    h += '<div class="card" style="--stripe:'+c.color+'"><div class="cls-h"><h3>'+esc(c.name)+'</h3>'+
+         '<div class="code mono">'+esc(c.code)+' &middot; ou='+c.id+'</div></div><div class="cls-b">';
+    if(!mine.length){
+      h += '<p class="sub">No assignments, quizzes, or discussions in D2L. This class runs its work somewhere else &mdash; check ALEKS or your syllabus.</p>';
+    } else {
+      if(live.length){
+        live.slice(0,14).forEach(function(i){
+          var r = relative(i.due);
+          h += '<div class="mini"><span class="mn'+(done[i.key]?'" style="opacity:.45;text-decoration:line-through':'')+'">'+esc(i.name)+'</span>'+
+               '<span class="md" style="'+(r.c==="late"?"color:var(--red)":r.c==="hot"?"color:var(--gold)":"")+'">'+fmtDate(i.due)+'</span></div>';
+        });
+        if(live.length>14) h += '<p class="sub">+ '+(live.length-14)+' more with dates</p>';
+      }
+      if(undated.length) h += '<p class="sub">'+undated.length+' item'+(undated.length>1?"s":"")+' with no due date (discussions, drop boxes).</p>';
+      if(stale.length)   h += '<p class="sub">'+stale.length+' item'+(stale.length>1?"s":"")+' dated outside this term &mdash; verify before trusting.</p>';
+    }
+    h += '</div></div>';
+  });
+  h += '</div>';
+  document.getElementById("v-classes").innerHTML = h;
+}
+
+/* ---------- grades ---------- */
+var SKIP = /^(Class Average|Subtotals|Final Grades|Administration|Labs|Assignments|Quizzes|Exams|Tests)$/i;
+var SKIP2 = /(Average|Substitution|\(Policy\)|Grade at Midterm|Fall and Spring|Final Pie Progress)/i;
+function scorable(g){ return g.p!=null && g.p>0 && !SKIP.test(g.n) && !SKIP2.test(g.n); }
+function letter(p){
+  if(p>=90) return "A"; if(p>=80) return "B"; if(p>=70) return "C"; if(p>=60) return "D"; return "F";
+}
+function renderGrades(){
+  var h = '';
+  courses.forEach(function(c){
+    var rows = c.grades.filter(scorable);
+    var earned=0, poss=0, entered=0;
+    rows.forEach(function(g){
+      var k = c.id+"|"+g.n;
+      var v = whatif[k];
+      if(v==null || v==="") return;
+      var n = parseFloat(v);
+      if(isNaN(n)) return;
+      earned += n; poss += g.p; entered++;
+    });
+    var pct = poss>0 ? (earned/poss*100) : null;
+    h += '<div class="card" style="--stripe:'+c.color+';margin-bottom:18px">';
+    h += '<div class="gr-head"><h3>'+esc(c.name)+'</h3><div class="gr-score">'+
+         '<div class="pc" style="color:'+(pct==null?"var(--faint)":c.color)+'">'+(pct==null?"&mdash;":pct.toFixed(1)+"%")+'</div>'+
+         '<div class="lt">'+(pct==null?"NOTHING ENTERED":letter(pct)+" &middot; "+entered+" of "+rows.length+" items")+'</div></div></div>';
+    if(!rows.length){
+      h += '<p class="note">No point-bearing grade items in D2L for this class yet.</p>';
+    } else {
+      h += '<div class="grid-scroll"><table><thead><tr><th>Grade item</th><th style="text-align:right">Out of</th><th style="text-align:right">Your score</th></tr></thead><tbody>';
+      rows.forEach(function(g){
+        var k = c.id+"|"+g.n;
+        var v = whatif[k]==null?"":whatif[k];
+        h += '<tr><td>'+esc(g.n)+'</td><td class="num">'+g.p+'</td>'+
+             '<td class="num"><input class="score-in'+(v!==""?" filled":"")+'" inputmode="decimal" value="'+esc(v)+'" data-wi="'+esc(k)+'" aria-label="Your score for '+esc(g.n)+'"></td></tr>';
+      });
+      h += '</tbody></table></div>';
+      h += '<p class="note"><strong>Points-based estimate.</strong> D2L doesn&rsquo;t expose category weights through the pages this pulls from, so this totals raw points across the items you fill in &mdash; it will differ from your real grade if your syllabus weights categories. Type hypothetical scores to see where you&rsquo;d land.</p>';
+    }
+    h += '</div>';
+  });
+  document.getElementById("v-grades").innerHTML = h;
+  Array.prototype.forEach.call(document.querySelectorAll("[data-wi]"), function(inp){
+    inp.oninput = function(){
+      whatif[this.getAttribute("data-wi")] = this.value;
+      save(K.whatif,whatif);
+      clearTimeout(inp._t);
+      inp._t = setTimeout(function(){
+        var a = document.activeElement, id = a && a.getAttribute ? a.getAttribute("data-wi") : null;
+        renderGrades();
+        if(id){ var n = document.querySelector('[data-wi="'+id.replace(/"/g,'\\"')+'"]'); if(n){ n.focus(); n.setSelectionRange(n.value.length,n.value.length); } }
+      }, 420);
+    };
+  });
+}
+
+/* ---------- sync ---------- */
+var SCRAPER = "javascript:(function(){var M={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};"+
+"var R=/([A-Z][a-z]{2})\\s+(\\d{1,2}),\\s+(\\d{4})(?:\\s+(\\d{1,2}):(\\d{2})\\s*(AM|PM))?/g;"+
+"var cl=function(s){return (s||'').replace(/\\s+/g,' ').trim()},tx=function(e){return e?cl(e.innerText||e.textContent):''};"+
+"var CUT=/\\s*(Available on|Available until|Due on|Starts|Ends|Access restricted|Opens|Closes)\\b/;"+
+"var NO=/Results Per Page|^No Category$|per page/i;"+
+"function ds(t){var o=[],m;R.lastIndex=0;while((m=R.exec(t))!==null){if(!(m[1] in M))continue;var h=m[4]?+m[4]:23,i=m[5]?+m[5]:59;if(m[6]=='PM'&&h<12)h+=12;if(m[6]=='AM'&&h==12)h=0;o.push(new Date(+m[3],M[m[1]],+m[2],h,i).toISOString())}return o}"+
+"function af(t,l){var i=t.indexOf(l);if(i<0)return null;var d=ds(t.slice(i+l.length,i+l.length+40));return d.length?d[0]:null}"+
+"function T(u){return fetch(u,{credentials:'same-origin'}).then(function(r){return r.text()})}"+
+"function G(u){return T(u).then(function(h){return new DOMParser().parseFromString(h,'text/html')})}"+
+"function PA(doc){var o=[],s={};doc.querySelectorAll('table').forEach(function(t){var hd=tx(t.querySelector('tr'));if(!/Assignment/i.test(hd)||!/Completion Status/i.test(hd))return;[].slice.call(t.querySelectorAll('tr'),1).forEach(function(tr){var c=[].slice.call(tr.querySelectorAll('th,td'));if(c.length<2)return;var raw=tx(c[0]);if(!raw||NO.test(raw))return;var n=cl(raw.split(CUT)[0]);if(!n||s[n])return;s[n]=1;var rt=tx(tr),a=tr.querySelector('a[href]'),sc=rt.match(/([\\d.]+|-)\\s*\\/\\s*([\\d.]+)/);var st='';c.slice(1).forEach(function(x){var v=tx(x);if(/Submitted|Draft|Completed/i.test(v)&&!st)st=v});"+
+"o.push({t:'a',n:n,o:af(raw,'Available on'),d:af(raw,'Due on')||af(raw,'Available until')||af(raw,'Ends'),s:st||null,e:sc&&sc[1]!='-'?+sc[1]:null,p:sc?+sc[2]:null,u:a?a.getAttribute('href'):null})})});return o}"+
+"function PQ(doc,ou){var o=[],sec='Current';doc.querySelectorAll('table tr').forEach(function(tr){var rt=tx(tr);if(/^Past Quizzes/i.test(rt))sec='Past';else if(/^Current Quizzes/i.test(rt))sec='Current';var a=null;[].forEach.call(tr.querySelectorAll('a'),function(x){if(!a&&/GoToQuiz/.test(x.getAttribute('onclick')||''))a=x});if(!a)return;var q=((a.getAttribute('onclick')||'').match(/GoToQuiz\\((\\d+)/)||[])[1]||null;var n=cl(a.innerText);if(!n)return;var d=null,ui=rt.indexOf(' until ');if(ui>=0){var x=ds(rt.slice(ui,ui+50));if(x.length)d=x[0]}var al=ds(rt);if(!d)d=af(rt,'Due on')||(al.length?al[al.length-1]:null);var at=rt.match(/(\\d+)\\s*\\/\\s*(\\d+)\\s*$/);"+
+"o.push({t:'q',n:n,sec:sec,o:al.length?al[0]:null,d:d,at:at?+at[1]:null,am:at?+at[2]:null,u:q?'/d2l/lms/quizzing/user/quiz_summary.d2l?qi='+q+'&ou='+ou:null})});return o}"+
+"function PD(doc){var o=[],s={};doc.querySelectorAll('a[href*=\"/discussions/topics/\"]').forEach(function(a){var n=cl(a.innerText);if(!n||s[n]||/^Unread for topic/i.test(n))return;s[n]=1;o.push({t:'d',n:n,u:a.getAttribute('href')})});return o}"+
+"function PG(doc){var o=[],s={};doc.querySelectorAll('table').forEach(function(t){if(!/Grade Item/i.test(tx(t.querySelector('tr'))))return;[].slice.call(t.querySelectorAll('tr'),1).forEach(function(tr){var c=[].slice.call(tr.querySelectorAll('th,td')).map(tx).filter(function(x){return x!==''});if(c.length<2)return;var n=c[0];if(!n||NO.test(n)||s[n])return;s[n]=1;var pm=null;c.forEach(function(x){if(!pm&&/\\/\\s*[\\d.]+/.test(x))pm=x.match(/([\\d.]+|-)\\s*\\/\\s*([\\d.]+)/)});var pc=null;c.forEach(function(x){if(pc===null&&/%\\s*$/.test(x)&&!/^-/.test(x))pc=parseFloat(x)});"+
+"o.push({n:n,e:pm&&pm[1]!='-'?+pm[1]:null,p:pm?+pm[2]:null,pc:pc})})});return o}"+
+"var m=location.pathname.match(/^\\/d2l/);if(!location.hostname.match(/view\\.usg\\.edu$/)){alert('Owl Hours: run this while you are on your D2L page.');return}"+
+"fetch('/d2l/lp/courseSelector/6629/InitPartial',{credentials:'same-origin'}).then(function(r){return r.text()}).then(function(raw){"+
+"var seen={},ids=[];(raw.match(/\\/d2l\\/home\\/(\\d+)/g)||[]).forEach(function(s){var i=s.split('/').pop();if(!seen[i]){seen[i]=1;ids.push(i)}});"+
+"if(!ids.length){alert('Owl Hours: no courses found. Are you signed in?');return}"+
+"return Promise.all(ids.map(function(ou){return Promise.all([T('/d2l/home/'+ou),G('/d2l/lms/dropbox/user/folders_list.d2l?ou='+ou+'&isprv=0'),G('/d2l/lms/quizzing/user/quizzes_list.d2l?ou='+ou),G('/d2l/le/'+ou+'/discussions/List'),G('/d2l/lms/grades/my_grades/main.d2l?ou='+ou)]).then(function(p){"+
+"var hc=(p[0].match(/CO\\.\\d+\\.([A-Z]{2,4})(\\d{3,4}[A-Z]?)/)||[]);var tt=(p[0].match(/<title>([\\s\\S]*?)<\\/title>/)||[])[1]||('Course '+ou);tt=cl(tt).replace(/&amp;/g,'&').replace(/&#39;/g,String.fromCharCode(39)).replace(/&quot;/g,'\"');return{id:ou,code:hc[1]?hc[1]+' '+hc[2]:null,title:tt.replace(/^Homepage\\s*-\\s*/,'').replace(/\\s*Fall Semester \\d{4} CO\\s*$/,''),items:PA(p[1]).concat(PQ(p[2],ou)).concat(PD(p[3])),grades:PG(p[4])}}).catch(function(e){return{id:ou,title:'Course '+ou,items:[],grades:[]}})})).then(function(cs){"+
+"var out=JSON.stringify({v:1,scrapedAt:new Date().toISOString(),courses:cs});"+
+"var n=cs.reduce(function(a,c){return a+c.items.length},0);"+
+"var W=document.createElement('div');"+
+"W.setAttribute('style','position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483647;background:rgba(20,19,15,.78);display:flex;align-items:center;justify-content:center;padding:24px');"+
+"var B=document.createElement('div');"+
+"B.setAttribute('style','background:#fff;color:#1a1813;border-radius:12px;max-width:560px;width:100%;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.45);font:14px -apple-system,BlinkMacSystemFont,system-ui,sans-serif');"+
+"var H=document.createElement('div');H.setAttribute('style','font-weight:700;font-size:16px;margin-bottom:5px');H.textContent='Owl Hours';"+
+"var M=document.createElement('div');M.setAttribute('style','color:#57534a;margin-bottom:12px;line-height:1.45');"+
+"M.textContent='Found '+cs.length+' classes and '+n+' items. Copy this, then paste it into Owl Hours.';"+
+"var TA=document.createElement('textarea');TA.value=out;"+
+"TA.setAttribute('style','width:100%;height:104px;font:11px ui-monospace,SFMono-Regular,Menlo,monospace;border:1px solid #ddd;border-radius:8px;padding:8px;resize:vertical;-webkit-user-select:text;user-select:text');"+
+"var R=document.createElement('div');R.setAttribute('style','display:flex;gap:8px;margin-top:12px');"+
+"var CP=document.createElement('button');CP.textContent='Copy';"+
+"CP.setAttribute('style','background:#9a7400;color:#fff;border:0;border-radius:8px;padding:9px 17px;font-weight:600;font-size:14px;cursor:pointer');"+
+"var CL=document.createElement('button');CL.textContent='Close';"+
+"CL.setAttribute('style','background:transparent;color:#57534a;border:1px solid #ddd;border-radius:8px;padding:9px 15px;font-size:14px;cursor:pointer');"+
+"function sel(){TA.focus();TA.select();try{TA.setSelectionRange(0,out.length)}catch(e){}}"+
+"CP.onclick=function(){sel();var ok=false;try{ok=document.execCommand('copy')}catch(e){}"+
+"function win(){M.textContent='Copied. Go back to Owl Hours and paste it into the Sync D2L tab.';M.style.color='#3b7a56'}"+
+"function nudge(){M.textContent='Press Cmd+C now (Ctrl+C on Windows) \\u2014 the text is already selected.';M.style.color='#a93a2a'}"+
+"if(ok){win();return}"+
+"if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(out).then(win,nudge)}else{nudge()}};"+
+"CL.onclick=function(){if(W.parentNode)W.parentNode.removeChild(W)};"+
+"W.onclick=function(e){if(e.target===W&&W.parentNode)W.parentNode.removeChild(W)};"+
+"R.appendChild(CP);R.appendChild(CL);B.appendChild(H);B.appendChild(M);B.appendChild(TA);B.appendChild(R);W.appendChild(B);document.body.appendChild(W);sel();"+
+"})}).catch(function(e){alert('Owl Hours: '+e)})})();";
+
+function renderSync(){
+  var when = DATA.scrapedAt ? new Date(DATA.scrapedAt) : null;
+  var h = '<div class="sync">';
+  h += '<div class="card"><div class="card-h"><h3>Where your data comes from</h3></div><div class="card-b">';
+  var state = isCustom ? "Your own D2L pull" : (isEmpty ? "No classes loaded yet" : "Built-in snapshot");
+  h += '<p class="stat"><span class="dot" style="background:'+(isEmpty?"var(--red)":isCustom?"var(--green)":"var(--gold)")+'"></span>'+
+       state + (when && !isEmpty ? " &middot; "+when.toLocaleString() : "")+'</p>';
+  h += '<p class="sub">Owl Hours can&rsquo;t reach D2L on its own &mdash; it&rsquo;s a sandboxed page and has no access to your login. You bring the data over with the button below. It stays in this browser, on this device: nobody else who opens this link can see it.</p>';
+  h += '<p class="sub" id="safari-warn" style="display:none"><strong>Heads up, Safari:</strong> Safari deletes a site&rsquo;s saved data after 7 days without a visit. If you don&rsquo;t open Owl Hours for a week, your classes and checkmarks will be gone and you&rsquo;ll need to run the grabber again. Opening it every few days is enough to keep it. Chrome and Firefox don&rsquo;t do this.</p>';
+  h += '</div></div>';
+
+  h += '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Load your own classes</h3></div><div class="card-b">';
+  h += '<div class="step"><span class="k">1</span><div><h4>Save the grabber</h4>'+
+       '<p>In Chrome, Edge, or Firefox: drag this button onto your bookmarks bar. In Safari, dragging won&rsquo;t work &mdash; follow the Safari steps below instead.</p>'+
+       '<a class="bmk" id="bmk" href="#">Grab my D2L</a> <button class="btn ghost" id="copy-code">Copy the code</button>'+
+       '<details class="br"><summary>Safari &mdash; do it this way</summary><div class="bd"><ol>'+
+       '<li>Hit <b>Copy the code</b> above.</li>'+
+       '<li>Show the Favorites bar: <b>View &rarr; Show Favorites Bar</b> (<kbd>&#8679;&#8984;B</kbd>).</li>'+
+       '<li>Go to any page and press <kbd>&#8984;D</kbd> to bookmark it. Save it to <b>Favorites</b> and name it <b>Grab my D2L</b>.</li>'+
+       '<li>Open <b>Bookmarks &rarr; Edit Bookmarks</b> (<kbd>&#8997;&#8984;B</kbd>), find that bookmark, right-click it and choose <b>Edit Address</b>.</li>'+
+       '<li>Select the whole address, paste the copied code over it, and press Return.</li>'+
+       '</ol><p style="margin:9px 0 0">Safari strips <span class="mono">javascript:</span> if you paste it straight into the address bar, so it has to go in through the bookmark editor. On iPhone or iPad, do this on a Mac first &mdash; iCloud syncs the bookmark to your phone, where it works from the Favorites list.</p></div></details>'+
+       '<details class="br"><summary>Firefox</summary><div class="bd">Dragging works, but if the bookmarks bar is hidden press <kbd>&#8679;&#8984;B</kbd> (<kbd>Ctrl+Shift+B</kbd> on Windows) first. You can also right-click the bar &rarr; <b>Add Bookmark</b> and paste the code into the URL field.</div></details>'+
+       '</div></div>';
+  h += '<div class="step"><span class="k">2</span><div><h4>Run it on D2L</h4>'+
+       '<p>Sign in at <span class="mono">kennesaw.view.usg.edu</span>, then click the bookmark. It reads your assignments, quizzes, discussions, and grades for every class you&rsquo;re in &mdash; takes a few seconds &mdash; then shows you a box with the result and a <b>Copy</b> button.</p></div></div>';
+  h += '<div class="step"><span class="k">3</span><div><h4>Paste it here</h4>'+
+       '<textarea class="inp" id="paste" placeholder="Paste what the grabber copied"></textarea>'+
+       '<div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap">'+
+       '<button class="btn" id="load">Load my classes</button>'+
+       '<button class="btn ghost" id="reset">Back to the built-in snapshot</button></div>'+
+       '<p class="sub" id="msg"></p></div></div>';
+  h += '</div></div>';
+
+  h += '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Sync across your devices</h3></div><div class="card-b">';
+  h += '<p class="sub" style="padding-top:0">Loading on your laptop does nothing for your phone &mdash; each device keeps its own copy. '+
+       'If you put your data somewhere both can reach, point them at the same address and they&rsquo;ll stay in step.</p>';
+  h += '<input class="inp" id="sync-url" type="url" spellcheck="false" style="width:100%;margin-top:4px" placeholder="https://&hellip; address of your data" value="'+esc(sync.url||"")+'">';
+  h += '<div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;align-items:center">'+
+       '<button class="btn" id="sync-pull">Pull now</button>'+
+       '<label style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);cursor:pointer">'+
+       '<input type="checkbox" id="sync-auto" style="accent-color:var(--gold);width:15px;height:15px"'+(sync.auto?" checked":"")+'> Check on every open</label></div>';
+  h += '<p class="sub" id="sync-msg"></p>';
+  h += '</div></div></div>';
+  document.getElementById("v-sync").innerHTML = h;
+
+  var su = document.getElementById("sync-url"), sm = document.getElementById("sync-msg");
+  function remember(){ sync.url = su.value.trim(); sync.auto = document.getElementById("sync-auto").checked; save(K.sync, sync); }
+  su.onchange = remember;
+  document.getElementById("sync-auto").onchange = remember;
+  document.getElementById("sync-pull").onclick = function(){
+    remember();
+    if(!sync.url){ sm.textContent = "Put the address of your data in the box first."; return; }
+    sm.textContent = "Pulling\u2026";
+    pullSync(false, function(t){ sm.textContent = t; });
+  };
+
+  var isSafari = /^((?!chrome|chromium|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
+  if(isSafari){
+    var w = document.getElementById("safari-warn");
+    if(w) w.style.display = "";
+    var d = document.querySelector("details.br");
+    if(d) d.setAttribute("open","");
+  }
+  document.getElementById("bmk").setAttribute("href", SCRAPER);
+  document.getElementById("bmk").onclick = function(e){
+    e.preventDefault();
+    document.getElementById("msg").textContent = isSafari
+      ? "Bookmarklets can’t run from inside this page. Follow the Safari steps above to save it, then click it while you’re on D2L."
+      : "Bookmarklets can’t run from inside this page — drag the button to your bookmarks bar, then click it while you’re on D2L.";
+  };
+  document.getElementById("copy-code").onclick = function(){
+    var b = this;
+    var write = navigator.clipboard && navigator.clipboard.writeText
+      ? navigator.clipboard.writeText(SCRAPER) : Promise.reject();
+    write.then(function(){ b.textContent="Copied"; setTimeout(function(){ b.textContent="Copy the code"; },1600); },
+               function(){ b.textContent="Press Ctrl+C"; });
+  };
+  document.getElementById("load").onclick = function(){
+    var raw = document.getElementById("paste").value.trim();
+    var msg = document.getElementById("msg");
+    if(!raw){ msg.textContent = "Paste the text the grabber copied first."; return; }
+    var parsed;
+    try{ parsed = JSON.parse(raw); }
+    catch(e){ msg.textContent = "That isn’t the grabber’s output — it should start with a { and end with a }."; return; }
+    if(!parsed || !parsed.courses || !parsed.courses.length){ msg.textContent = "No classes in there. Run the grabber again while signed in to D2L."; return; }
+    save(K.data, parsed);
+    msg.textContent = "Loaded "+parsed.courses.length+" classes. Reloading…";
+    setTimeout(function(){ location.reload(); }, 700);
+  };
+  document.getElementById("reset").onclick = function(){
+    try{ localStorage.removeItem(K.data); }catch(e){}
+    location.reload();
+  };
+}
+
+/* ---------- pulling data from a URL ---------- */
+function pullSync(silent, say){
+  if(!sync.url) return;
+  fetch(sync.url, {cache:"no-store"}).then(function(r){
+    if(!r.ok) throw new Error("the address returned "+r.status);
+    return r.json();
+  }).then(function(j){
+    if(!j || !j.courses || !j.courses.length) throw new Error("no classes in that data");
+    if(JSON.stringify(j) === JSON.stringify(DATA)){ if(say) say("Already up to date."); return; }
+    save(K.data, j);
+    /* one reload per page-open, so an auto-pull can never spin */
+    try{ if(silent){ if(sessionStorage.getItem("owlhours.pulled")) return; sessionStorage.setItem("owlhours.pulled","1"); } }catch(e){}
+    if(say) say("Got "+j.courses.length+" classes. Reloading\u2026");
+    setTimeout(function(){ location.reload(); }, say ? 600 : 0);
+  }).catch(function(e){
+    if(say) say("Could not pull: "+e.message);
+  });
+}
+
+/* ---------- shell ---------- */
+var VIEWS = ["agenda","calendar","classes","grades","sync"];
+function show(v){
+  ui.view = v; save(K.ui,ui);
+  VIEWS.forEach(function(n){
+    document.getElementById("v-"+n).classList.toggle("hidden", n!==v);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
+    t.setAttribute("aria-selected", String(t.getAttribute("data-view")===v));
+  });
+  if(v==="agenda") renderAgenda();
+  if(v==="calendar") renderCalendar();
+  if(v==="classes") renderClasses();
+  if(v==="grades") renderGrades();
+  if(v==="sync") renderSync();
+  window.scrollTo(0,0);
+}
+Array.prototype.forEach.call(document.querySelectorAll("[data-view]"), function(b){
+  b.onclick = function(){ show(this.getAttribute("data-view")); };
+});
+
+document.addEventListener("click", function(e){
+  var chk = e.target.closest ? e.target.closest("[data-check]") : null;
+  if(chk){
+    var k = chk.getAttribute("data-check");
+    if(done[k]) delete done[k]; else done[k] = 1;
+    save(K.done, done);
+    if(ui.view==="agenda") renderAgenda();
+    else if(ui.view==="calendar") renderCalendar();
+    else if(ui.view==="classes") renderClasses();
+    return;
+  }
+  var f = e.target.closest ? e.target.closest("[data-filter]") : null;
+  if(f){
+    var id = f.getAttribute("data-filter");
+    if(ui.off[id]) delete ui.off[id]; else ui.off[id] = 1;
+    save(K.ui, ui);
+    renderAgenda();
+  }
+});
+
+show(VIEWS.indexOf(ui.view)>=0 ? ui.view : "agenda");
+if(sync.auto && sync.url) pullSync(true, null);
+})();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () { /* offline support is optional */ });
+  });
+}
+</script>
+</body>
+</html>
