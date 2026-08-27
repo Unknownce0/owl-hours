@@ -15,20 +15,54 @@
     "appId": "edu.kennesaw.owlhours",
     "productName": "Owl Hours",
     "copyright": "Owl Hours",
-    "directories": { "output": "../dist", "buildResources": "build" },
-    "files": ["main.js", "app/**/*", "build/icon.png"],
+    "directories": {
+      "output": "../dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "app/**/*",
+      "build/icon.png"
+    ],
     "mac": {
-      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
       "category": "public.app-category.education",
       "icon": "build/icon.png",
       "identity": null
     },
-    "dmg": { "title": "Owl Hours" },
+    "dmg": {
+      "title": "Owl Hours",
+      "writeUpdateInfo": false
+    },
     "win": {
-      "target": [{ "target": "portable", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "build/icon.png"
     },
-    "portable": { "artifactName": "Owl-Hours-Windows.exe" }
+    "portable": {
+      "artifactName": "Owl-Hours-Windows.exe"
+    }
   },
   "devDependencies": {
     "electron": "^33.0.0",
