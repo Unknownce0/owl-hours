@@ -46,6 +46,17 @@ Installing from the browser avoids all of this.
 To keep several devices in step, host the grabber's output somewhere both can reach and
 put that address in **Sync across your devices**.
 
+## Updates
+
+The web app updates itself. When a new build is deployed the service worker picks it up
+and a banner offers a **Reload** — nothing is swapped out mid-use, and the cache name is
+tied to the version so a stale shell can't linger.
+
+Downloaded desktop apps can't update themselves, so they check the Releases API at most
+once every six hours and show a banner pointing at the new download. Dismissing it is
+remembered for that version and returns for the next one. If the check fails — offline,
+rate-limited, blocked — nothing is shown.
+
 ## Working on it
 
     python3 src/make_icons.py    # regenerate app icons (no dependencies)

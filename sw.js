@@ -1,7 +1,7 @@
 /* Owl Hours service worker.
    The app is one HTML file plus icons, and all coursework lives in localStorage,
    so caching the shell is enough to make it work with no signal at all. */
-const CACHE = 'owl-hours-v1';
+const CACHE = 'owl-hours-1.0.0';
 const SHELL = [
   './',
   './index.html',
@@ -12,7 +12,9 @@ const SHELL = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // Deliberately no skipWaiting() here: the new build waits until the user
+  // presses Reload, so the page never swaps out from under them mid-use.
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
 });
 
 self.addEventListener('activate', e => {
@@ -21,6 +23,11 @@ self.addEventListener('activate', e => {
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
+});
+
+/* The page asks the parked worker to take over when the user hits Reload. */
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('fetch', e => {

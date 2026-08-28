@@ -54,11 +54,23 @@ if ('serviceWorker' in navigator) {
 </script>"""
 
 
+VERSION_PLACEHOLDER = '/*__VERSION__*/"dev"'
+
+
+def app_version():
+    """Single source of truth for the version: electron/package.json."""
+    pkg = os.path.join(HERE, "electron", "package.json")
+    return json.load(open(pkg))["version"]
+
+
 def render(data_json):
     tpl = open(TPL).read()
     if PLACEHOLDER not in tpl:
         sys.exit("refusing to build: template placeholder is missing")
-    return tpl.replace(PLACEHOLDER, data_json)
+    if VERSION_PLACEHOLDER not in tpl:
+        sys.exit("refusing to build: version placeholder is missing")
+    return (tpl.replace(PLACEHOLDER, data_json)
+               .replace(VERSION_PLACEHOLDER, json.dumps(app_version())))
 
 
 def load_private_data():
@@ -81,6 +93,20 @@ def main():
             + body + TAIL.replace("__SW__", SW_REG))
     open(os.path.join(HERE, "index.html"), "w").write(html)
     built.append(("index.html (PWA, no data)", len(html)))
+
+    # The cache name has to change per release, or the worker keeps serving
+    # the old shell and nobody ever sees the update.
+    sw_src = os.path.join(HERE, "sw.js")
+    sw = open(sw_src).read()
+    stamped = sw.replace("__VERSION__", app_version())
+    if stamped != sw:
+        open(sw_src, "w").write(stamped)
+    elif "owl-hours-" + app_version() not in sw:
+        import re as _re
+        stamped = _re.sub(r"const CACHE = 'owl-hours-[^']*';",
+                          "const CACHE = 'owl-hours-%s';" % app_version(), sw)
+        open(sw_src, "w").write(stamped)
+    built.append(("sw.js (cache owl-hours-%s)" % app_version(), len(stamped)))
 
     # 2. Electron loads the same document, minus the service worker
     appdir = os.path.join(HERE, "electron", "app")
@@ -105,6 +131,7 @@ def main():
     else:
         print("  note: private/data.json absent — skipping the artifact build")
 
+    print("  version %s" % app_version())
     for name, size in built:
         print("  %-58s %7d bytes" % (name, size))
 

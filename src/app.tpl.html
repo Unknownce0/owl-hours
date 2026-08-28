@@ -207,6 +207,21 @@ details.br kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel);
 .empty{text-align:center;padding:44px 20px;color:var(--faint)}
 .empty p{margin:6px 0 0;font-size:13.5px}
 .hidden{display:none !important}
+
+/* update banner */
+.ubar{background:var(--gold-soft);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:39}
+.ubar-in{max-width:1180px;margin:0 auto;padding:10px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13.5px}
+.ubar .dotpulse{width:8px;height:8px;border-radius:50%;background:var(--gold);flex:0 0 auto}
+@media (prefers-reduced-motion:no-preference){
+  .ubar .dotpulse{animation:upulse 2.4s ease-in-out infinite}
+  @keyframes upulse{0%,100%{opacity:1}50%{opacity:.35}}
+}
+.ubar .utext{flex:1;min-width:180px;color:var(--ink)}
+.ubar .utext b{font-weight:600}
+.ubar a.ubtn,.ubar button.ubtn{background:var(--gold);color:#fff;border:0;border-radius:7px;padding:6px 13px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap}
+.ubar button.udismiss{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:2px 6px}
+.ubar button.udismiss:hover{color:var(--ink)}
+.vstamp{font-family:var(--mono);font-size:11px;color:var(--faint)}
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 </style>
 
@@ -227,6 +242,8 @@ details.br kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel);
   </div>
 </div>
 
+<div id="updatebar" class="ubar hidden"></div>
+
 <div class="wrap">
   <div id="v-agenda"></div>
   <div id="v-calendar" class="hidden"></div>
@@ -240,6 +257,8 @@ details.br kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel);
 "use strict";
 
 var DEFAULT_DATA = /*__DATA__*/null;
+var APP_VERSION  = /*__VERSION__*/"dev";
+var REPO         = "Unknownce0/owl-hours";
 
 /* Fall 2026 term window. Anything due outside this is a leftover from a
    copied-forward course shell, not something you actually owe. */
@@ -247,7 +266,8 @@ var TERM_START = new Date(2026,7,1).getTime();
 var TERM_END   = new Date(2027,0,15).getTime();
 
 var K = {data:"owlhours.data.v1", done:"owlhours.done.v1", todos:"owlhours.todos.v1",
-         whatif:"owlhours.whatif.v1", ui:"owlhours.ui.v1", sync:"owlhours.sync.v1"};
+         whatif:"owlhours.whatif.v1", ui:"owlhours.ui.v1", sync:"owlhours.sync.v1",
+         upd:"owlhours.update.v1"};
 
 function load(k,f){ try{ var s=localStorage.getItem(k); return s?JSON.parse(s):f; }catch(e){ return f; } }
 function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
@@ -702,6 +722,8 @@ function renderSync(){
   var state = isCustom ? "Your own D2L pull" : (isEmpty ? "No classes loaded yet" : "Built-in snapshot");
   h += '<p class="stat"><span class="dot" style="background:'+(isEmpty?"var(--red)":isCustom?"var(--green)":"var(--gold)")+'"></span>'+
        state + (when && !isEmpty ? " &middot; "+when.toLocaleString() : "")+'</p>';
+  h += '<p class="vstamp">Owl Hours '+esc(APP_VERSION)+' &middot; '+(DESKTOP?"desktop app":"web app")+
+       (DESKTOP?" &middot; <a href=\"https://github.com/'+REPO+'/releases\" target=\"_blank\" rel=\"noopener\">releases</a>":"")+'</p>';
   h += '<p class="sub">Owl Hours can&rsquo;t reach D2L on its own &mdash; it&rsquo;s a sandboxed page and has no access to your login. You bring the data over with the button below. It stays in this browser, on this device: nobody else who opens this link can see it.</p>';
   h += '<p class="sub" id="safari-warn" style="display:none"><strong>Heads up, Safari:</strong> Safari deletes a site&rsquo;s saved data after 7 days without a visit. If you don&rsquo;t open Owl Hours for a week, your classes and checkmarks will be gone and you&rsquo;ll need to run the grabber again. Opening it every few days is enough to keep it. Chrome and Firefox don&rsquo;t do this.</p>';
   h += '</div></div>';
@@ -881,6 +903,105 @@ function pullSync(silent, say){
     if(say) say("Could not pull: "+e.message);
   });
 }
+
+/* ---------- telling people there's a newer version ----------
+   Two different situations. The web app can update itself: the service worker
+   fetches the new build and we just need the page reloaded. A downloaded .dmg
+   or .exe cannot, so there we point at the release and let them fetch it. */
+
+function cmpVersion(a, b){
+  var x = String(a).replace(/^v/,"").split("."), y = String(b).replace(/^v/,"").split(".");
+  for(var i=0;i<Math.max(x.length,y.length);i++){
+    var d = (parseInt(x[i],10)||0) - (parseInt(y[i],10)||0);
+    if(d) return d < 0 ? -1 : 1;
+  }
+  return 0;
+}
+
+function showUpdateBar(html, wire){
+  var bar = document.getElementById("updatebar");
+  bar.innerHTML = '<div class="ubar-in"><span class="dotpulse"></span>'+html+
+                  '<button class="udismiss" aria-label="Dismiss">&times;</button></div>';
+  bar.classList.remove("hidden");
+  if(wire) wire(bar);
+  bar.querySelector(".udismiss").onclick = function(){ bar.classList.add("hidden"); };
+}
+
+/* the page itself was redeployed — reloading is all it takes */
+function offerReload(reg){
+  var upd = load(K.upd,{});
+  showUpdateBar('<span class="utext"><b>A new version is ready.</b> Reload to get it.</span>'+
+                '<button class="ubtn" id="u-reload">Reload</button>', function(bar){
+    bar.querySelector("#u-reload").onclick = function(){
+      this.textContent = "Reloading\u2026";
+      var w = reg && reg.waiting;
+      if(w){
+        /* the new worker is parked until told to take over */
+        navigator.serviceWorker.addEventListener("controllerchange", function once(){
+          navigator.serviceWorker.removeEventListener("controllerchange", once);
+          location.reload();
+        });
+        w.postMessage({type:"SKIP_WAITING"});
+        setTimeout(function(){ location.reload(); }, 1500);   // fallback
+      } else {
+        location.reload();
+      }
+    };
+  });
+}
+
+/* a newer release exists but this copy is an installed binary */
+function offerDownload(tag, url){
+  var upd = load(K.upd,{});
+  if(upd.dismissed === tag) return;
+  showUpdateBar('<span class="utext"><b>Version '+esc(tag)+' is out.</b> You have '+esc(APP_VERSION)+
+                '. Downloaded apps don\u2019t update themselves.</span>'+
+                '<a class="ubtn" href="'+esc(url)+'" target="_blank" rel="noopener">Get it</a>',
+    function(bar){
+      bar.querySelector(".udismiss").addEventListener("click", function(){
+        upd.dismissed = tag; save(K.upd, upd);
+      });
+    });
+}
+
+function checkForUpdate(){
+  if(APP_VERSION === "dev") return;
+  var upd = load(K.upd,{});
+  var SIX_HOURS = 6*60*60*1000;
+  if(upd.checkedAt && (Date.now() - upd.checkedAt) < SIX_HOURS){
+    if(upd.latest && cmpVersion(APP_VERSION, upd.latest) < 0) offerDownload(upd.latest, upd.url);
+    return;
+  }
+  fetch("https://api.github.com/repos/"+REPO+"/releases/latest", {cache:"no-store"})
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(j){
+      var tag = (j.tag_name||"").replace(/^v/,"");
+      if(!tag) return;
+      save(K.upd, {checkedAt: Date.now(), latest: tag, url: j.html_url});
+      if(cmpVersion(APP_VERSION, tag) < 0) offerDownload(tag, j.html_url);
+    })
+    .catch(function(){ /* offline, rate-limited, or blocked — never worth interrupting anyone */ });
+}
+
+function watchForNewBuild(){
+  if(!("serviceWorker" in navigator)) return;
+  navigator.serviceWorker.getRegistration().then(function(reg){
+    if(!reg) return;
+    if(reg.waiting && navigator.serviceWorker.controller){ offerReload(reg); return; }
+    reg.addEventListener("updatefound", function(){
+      var sw = reg.installing;
+      if(!sw) return;
+      sw.addEventListener("statechange", function(){
+        /* "installed" with an existing controller means this is a replacement,
+           not the very first install */
+        if(sw.state === "installed" && navigator.serviceWorker.controller) offerReload(reg);
+      });
+    });
+    reg.update().catch(function(){});
+  }).catch(function(){});
+}
+
+if(DESKTOP) checkForUpdate(); else watchForNewBuild();
 
 /* ---------- shell ---------- */
 var VIEWS = ["agenda","calendar","classes","grades","sync"];

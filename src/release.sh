@@ -13,6 +13,19 @@ VERSION="${1:-}"
 command -v gh >/dev/null || { echo "need the GitHub CLI: brew install gh"; exit 1; }
 gh auth status >/dev/null 2>&1 || { echo "not signed in: gh auth login"; exit 1; }
 
+if [ -n "$VERSION" ]; then
+  # One source of truth for the version; build.py stamps it into the app and
+  # the service worker cache name, and the update banner compares against it.
+  NUM="${VERSION#v}"
+  node -e '
+    const fs=require("fs"), p="electron/package.json";
+    const d=JSON.parse(fs.readFileSync(p,"utf8"));
+    d.version=process.argv[1];
+    fs.writeFileSync(p, JSON.stringify(d,null,2)+"\n");
+  ' "$NUM"
+  echo "==> version set to $NUM"
+fi
+
 echo "==> rebuilding the app"
 python3 build.py
 node src/make_grabbers.js
