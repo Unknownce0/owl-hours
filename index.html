@@ -323,7 +323,7 @@ function courseName(t){
 }
 var courses = (DATA.courses||[]).map(function(c,i){
   return { id:c.id, raw:c.title, name:courseName(c.title), code:c.code||courseCode(c.title),
-           color:"var(--c"+((i%6)+1)+")", idx:i, grades:c.grades||[] };
+           color:"var(--c"+((i%6)+1)+")", idx:i, grades:c.grades||[], fc:c.fc||null };
 });
 var byId = {}; courses.forEach(function(c){ byId[c.id]=c; });
 
@@ -670,32 +670,56 @@ function renderGrades(){
   var h = '';
   courses.forEach(function(c){
     var rows = c.grades.filter(scorable);
-    var earned=0, poss=0, entered=0;
+    /* Real scores come from D2L. A what-if entry, when present, replaces one so
+       you can see where a hypothetical result would land you. */
+    /* D2L pre-fills work that hasn't been graded yet as 0, and nothing in these
+       pages distinguishes that from an actual zero. Counting them would report
+       an F for a course that simply hasn't started marking, so a bare 0 is left
+       out; a what-if you typed always counts, zero included. */
+    var earned=0, poss=0, entered=0, real=0, zeros=0;
     rows.forEach(function(g){
       var k = c.id+"|"+g.n;
       var v = whatif[k];
-      if(v==null || v==="") return;
-      var n = parseFloat(v);
-      if(isNaN(n)) return;
+      var typed = (v!=null && v!=="");
+      var n = typed ? parseFloat(v) : (g.e!=null ? g.e : null);
+      if(n==null || isNaN(n)) return;
+      if(!typed && n === 0){ zeros++; return; }
       earned += n; poss += g.p; entered++;
+      if(!typed) real++;
     });
     var pct = poss>0 ? (earned/poss*100) : null;
     h += '<div class="card" style="--stripe:'+c.color+';margin-bottom:18px">';
-    h += '<div class="gr-head"><h3>'+esc(c.name)+'</h3><div class="gr-score">'+
-         '<div class="pc" style="color:'+(pct==null?"var(--faint)":c.color)+'">'+(pct==null?"&mdash;":pct.toFixed(1)+"%")+'</div>'+
-         '<div class="lt">'+(pct==null?"NOTHING ENTERED":letter(pct)+" &middot; "+entered+" of "+rows.length+" items")+'</div></div></div>';
+    var fc = c.fc;
+    var fcPct = fc && fc.p ? (fc.e/fc.p*100) : null;
+    h += '<div class="gr-head"><h3>'+esc(c.name)+'</h3>';
+    if(fc){
+      h += '<div class="gr-score"><div class="pc" style="color:'+c.color+'">'+fcPct.toFixed(1)+'%</div>'+
+           '<div class="lt">D2L&rsquo;S GRADE'+(fc.g?" &middot; "+esc(fc.g):"")+'</div></div>';
+    }
+    h += '<div class="gr-score">'+
+         '<div class="pc" style="color:'+(pct==null?"var(--faint)":"var(--muted)")+'">'+(pct==null?"&mdash;":pct.toFixed(1)+"%")+'</div>'+
+         '<div class="lt">'+(pct==null?"NOTHING GRADED YET"
+            : (entered-real>0 ? "WITH YOUR WHAT-IFS" : "FROM "+entered+" GRADED")+" &middot; "+letter(pct))+'</div></div></div>';
     if(!rows.length){
       h += '<p class="note">No point-bearing grade items in D2L for this class yet.</p>';
     } else {
-      h += '<div class="grid-scroll"><table><thead><tr><th>Grade item</th><th style="text-align:right">Out of</th><th style="text-align:right">Your score</th></tr></thead><tbody>';
+      h += '<div class="grid-scroll"><table><thead><tr><th>Grade item</th><th style="text-align:right">Score</th><th style="text-align:right">%</th><th style="text-align:right">What if&hellip;</th></tr></thead><tbody>';
       rows.forEach(function(g){
         var k = c.id+"|"+g.n;
         var v = whatif[k]==null?"":whatif[k];
-        h += '<tr><td>'+esc(g.n)+'</td><td class="num">'+g.p+'</td>'+
-             '<td class="num"><input class="score-in'+(v!==""?" filled":"")+'" inputmode="decimal" value="'+esc(v)+'" data-wi="'+esc(k)+'" aria-label="Your score for '+esc(g.n)+'"></td></tr>';
+        var actual = g.e!=null ? g.e : null;
+        var shown = v!=="" ? v : (actual!=null ? String(actual) : "");
+        var pctCell = actual!=null && g.p ? (actual/g.p*100).toFixed(0)+"%" : "&mdash;";
+        h += '<tr><td>'+esc(g.n)+'</td>'+
+             '<td class="num">'+(actual!=null?esc(String(actual)):"&mdash;")+' / '+g.p+'</td>'+
+             '<td class="num">'+pctCell+'</td>'+
+             '<td class="num"><input class="score-in'+(v!==""?" filled":"")+'" inputmode="decimal" value="'+esc(shown)+'" data-wi="'+esc(k)+'" aria-label="What-if score for '+esc(g.n)+'"></td></tr>';
       });
       h += '</tbody></table></div>';
-      h += '<p class="note"><strong>Points-based estimate.</strong> D2L doesn&rsquo;t expose category weights through the pages this pulls from, so this totals raw points across the items you fill in &mdash; it will differ from your real grade if your syllabus weights categories. Type hypothetical scores to see where you&rsquo;d land.</p>';
+      h += '<p class="note">'+(fc ? '<strong>D2L&rsquo;s grade is the real one.</strong> ' : '')+
+           'The second figure totals raw points across everything scored. D2L doesn&rsquo;t expose category weights through these pages, so where your syllabus weights categories the two will differ &mdash; trust D2L&rsquo;s. '+
+           'Type over any score to see where a different result would put you.</p>'+
+           (zeros ? '<p class="note" style="margin-top:0">'+zeros+' item'+(zeros>1?'s show':' shows')+' as 0 in D2L. Nothing here can tell a real zero from work that just hasn&rsquo;t been marked, so '+(zeros>1?'they are':'it is')+' left out of the figure above rather than counted as failure. Type a score in if you know it.</p>' : '');
     }
     h += '</div>';
   });
@@ -729,6 +753,7 @@ var SCRAPER = "javascript:(function(){var M={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5
 "function PQ(doc,ou){var o=[],sec='Current';doc.querySelectorAll('table tr').forEach(function(tr){var rt=tx(tr);if(/^Past Quizzes/i.test(rt))sec='Past';else if(/^Current Quizzes/i.test(rt))sec='Current';var a=null;[].forEach.call(tr.querySelectorAll('a'),function(x){if(!a&&/GoToQuiz/.test(x.getAttribute('onclick')||''))a=x});if(!a)return;var q=((a.getAttribute('onclick')||'').match(/GoToQuiz\\((\\d+)/)||[])[1]||null;var n=cl(a.innerText);if(!n)return;var al=ds(rt);var d=af(rt,'Due on');if(!d){var ui=rt.indexOf(' until ');if(ui>=0){var x=ds(rt.slice(ui,ui+50));if(x.length)d=x[0]}}if(!d)d=al.length?al[al.length-1]:null;var op=af(rt,'Available on')||(al.length?al[0]:null);var at=rt.match(/(\\d+)\\s*\\/\\s*(\\d+|Unlimited)\\s*$/i);"+
 "o.push({t:'q',n:n,sec:sec,o:op,d:d,at:at?+at[1]:null,am:at?(/^\\d+$/.test(at[2])?+at[2]:0):null,u:q?'/d2l/lms/quizzing/user/quiz_summary.d2l?qi='+q+'&ou='+ou:null})});return o}"+
 "function PD(doc){var o=[],s={};doc.querySelectorAll('a[href*=\"/discussions/topics/\"]').forEach(function(a){var n=cl(a.innerText);if(!n||s[n]||/^Unread for topic/i.test(n))return;s[n]=1;o.push({t:'d',n:n,u:a.getAttribute('href')})});return o}"+
+"function FC(doc){var x=(doc.body?(doc.body.innerText||doc.body.textContent||''):'').replace(/\\s+/g,' ');var m=x.match(/Final Calculated Grade Points ([\\d.]+) \\/ ([\\d.]+)(?: Grade ([A-F][+-]?))?/i);return m?{e:+m[1],p:+m[2],g:m[3]||null}:null}"+
 "function PG(doc){var o=[],s={};doc.querySelectorAll('table').forEach(function(t){if(!/Grade Item/i.test(tx(t.querySelector('tr'))))return;[].slice.call(t.querySelectorAll('tr'),1).forEach(function(tr){var c=[].slice.call(tr.querySelectorAll('th,td')).map(tx).filter(function(x){return x!==''});if(c.length<2)return;var n=c[0];if(!n||NO.test(n)||s[n])return;s[n]=1;var pm=null;c.forEach(function(x){if(!pm&&/\\/\\s*[\\d.]+/.test(x))pm=x.match(/([\\d.]+|-)\\s*\\/\\s*([\\d.]+)/)});var pc=null;c.forEach(function(x){if(pc===null&&/%\\s*$/.test(x)&&!/^-/.test(x))pc=parseFloat(x)});"+
 "o.push({n:n,e:pm&&pm[1]!='-'?+pm[1]:null,p:pm?+pm[2]:null,pc:pc})})});return o}"+
 "var m=location.pathname.match(/^\\/d2l/);if(!location.hostname.match(/view\\.usg\\.edu$/)){alert('Owl Hours: run this while you are on your D2L page.');return}"+
@@ -736,7 +761,7 @@ var SCRAPER = "javascript:(function(){var M={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5
 "var seen={},ids=[];(raw.match(/\\/d2l\\/home\\/(\\d+)/g)||[]).forEach(function(s){var i=s.split('/').pop();if(!seen[i]){seen[i]=1;ids.push(i)}});"+
 "if(!ids.length){alert('Owl Hours: no courses found. Are you signed in?');return}"+
 "return Promise.all(ids.map(function(ou){return Promise.all([T('/d2l/home/'+ou),G('/d2l/lms/dropbox/user/folders_list.d2l?ou='+ou+'&isprv=0'),G('/d2l/lms/quizzing/user/quizzes_list.d2l?ou='+ou),G('/d2l/le/'+ou+'/discussions/List'),G('/d2l/lms/grades/my_grades/main.d2l?ou='+ou)]).then(function(p){"+
-"var hc=(p[0].match(/CO\\.\\d+\\.([A-Z]{2,4})(\\d{3,4}[A-Z]?)/)||[]);var tt=(p[0].match(/<title>([\\s\\S]*?)<\\/title>/)||[])[1]||('Course '+ou);tt=cl(tt).replace(/&amp;/g,'&').replace(/&#39;/g,String.fromCharCode(39)).replace(/&quot;/g,'\"');return{id:ou,code:hc[1]?hc[1]+' '+hc[2]:null,title:tt.replace(/^Homepage\\s*-\\s*/,'').replace(/\\s*Fall Semester \\d{4} CO\\s*$/,''),items:PA(p[1]).concat(PQ(p[2],ou)).concat(PD(p[3])),grades:PG(p[4])}}).catch(function(e){return{id:ou,title:'Course '+ou,items:[],grades:[]}})})).then(function(cs){"+
+"var hc=(p[0].match(/CO\\.\\d+\\.([A-Z]{2,4})(\\d{3,4}[A-Z]?)/)||[]);var tt=(p[0].match(/<title>([\\s\\S]*?)<\\/title>/)||[])[1]||('Course '+ou);tt=cl(tt).replace(/&amp;/g,'&').replace(/&#39;/g,String.fromCharCode(39)).replace(/&quot;/g,'\"');return{id:ou,code:hc[1]?hc[1]+' '+hc[2]:null,title:tt.replace(/^Homepage\\s*-\\s*/,'').replace(/\\s*Fall Semester \\d{4} CO\\s*$/,''),items:PA(p[1]).concat(PQ(p[2],ou)).concat(PD(p[3])),grades:PG(p[4]),fc:FC(p[4])}}).catch(function(e){return{id:ou,title:'Course '+ou,items:[],grades:[]}})})).then(function(cs){"+
 "var out=JSON.stringify({v:1,scrapedAt:new Date().toISOString(),courses:cs});"+
 "var n=cs.reduce(function(a,c){return a+c.items.length},0);"+
 "var W=document.createElement('div');"+
