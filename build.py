@@ -73,6 +73,30 @@ def render(data_json):
                .replace(VERSION_PLACEHOLDER, json.dumps(app_version())))
 
 
+def merge_extras(parsed):
+    """Fold in work D2L cannot see (ALEKS, and anything else added by hand).
+
+    The daily scrape overwrites private/data.json wholesale, so anything not in
+    D2L has to live in its own file and be merged at build time or it would be
+    silently lost every morning.
+    """
+    p = os.path.join(HERE, "private", "extra-items.json")
+    if not os.path.exists(p):
+        return 0
+    extra = json.load(open(p))
+    added = 0
+    for course in parsed.get("courses", []):
+        block = extra.get("courses", {}).get(course["id"])
+        if not block:
+            continue
+        have = {i.get("n") for i in course.get("items", [])}
+        for item in block.get("items", []):
+            if item.get("n") not in have:
+                course.setdefault("items", []).append(item)
+                added += 1
+    return added
+
+
 def load_private_data():
     p = os.path.join(HERE, "private", "data.json")
     if not os.path.exists(p):
@@ -81,6 +105,10 @@ def load_private_data():
     parsed = json.loads(raw)
     if not parsed.get("courses"):
         sys.exit("refusing to build: private/data.json has no courses")
+    added = merge_extras(parsed)
+    if added:
+        print("  merged %d item(s) from private/extra-items.json" % added)
+        raw = json.dumps(parsed, ensure_ascii=False, separators=(",", ":"))
     return raw, parsed
 
 
