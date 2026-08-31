@@ -931,8 +931,32 @@ function desktopGrab(interactive, note){
   }, function(e){ if(note) note("Couldn\u2019t reach D2L: "+e); });
 }
 
+/* When Kennesaw's sign-in lapses the app can't see new work. Say so plainly
+   rather than sitting there looking up to date, and put the fix one click away. */
+function showSignInBar(note){
+  showUpdateBar('<span class="utext"><b>Your D2L sign-in has expired.</b> '+
+    (note || 'Owl Hours can&rsquo;t see new work until you sign in again.')+'</span>'+
+    '<button class="ubtn" id="u-signin">Sign in to D2L</button>', function(bar){
+      bar.querySelector("#u-signin").onclick = function(){
+        var b = this;
+        b.disabled = true; b.textContent = "Opening D2L\u2026";
+        desktopGrab(true, function(s){
+          var msg = bar.querySelector(".utext");
+          if(/Reloading|up to date/i.test(s)){
+            b.textContent = "Signed in";
+            msg.innerHTML = "<b>Signed in.</b> Bringing everything up to date\u2026";
+          } else {
+            b.disabled = false; b.textContent = "Sign in to D2L";
+            msg.textContent = s;
+          }
+        });
+      };
+    });
+}
+
 if(DESKTOP){
   window.owl.onData(function(j){ applyData(j, null); });
+  window.owl.onNeedLogin(function(){ showSignInBar(); });
 }
 
 /* ---------- pulling data from a URL ---------- */
@@ -1122,10 +1146,15 @@ if(DESKTOP){
   var rb = document.getElementById("btn-refresh");
   rb.style.display = "";
   rb.onclick = function(){
-    var b = this, old = b.textContent;
+    var b = this, label = b.textContent;
     b.textContent = "Refreshing\u2026"; b.disabled = true;
-    desktopGrab(true, function(s){ b.textContent = /Reloading/.test(s) ? "Done" : old; });
-    setTimeout(function(){ b.textContent = old; b.disabled = false; }, 4000);
+    var restore = function(){ b.textContent = label; b.disabled = false; };
+    desktopGrab(true, function(s){
+      if(/signed out|sign-in|sign in/i.test(s)){ restore(); showSignInBar(); return; }
+      if(/Reloading/.test(s)){ b.textContent = "Done"; return; }
+      restore();
+    });
+    setTimeout(restore, 8000);
   };
 }
 

@@ -77,6 +77,9 @@ ipcMain.handle('owl:signout', () => d2l.signOut());
    nothing and wait for the user to ask — no surprise login windows. */
 async function refreshQuietly() {
   const res = await d2l.grab(false);
+  // A lapsed Kennesaw sign-in used to fail silently, so the app just looked
+  // stale. Tell the window, and let the user decide when to sign in.
+  if (!res.ok && res.needLogin) send('owl:needlogin', true);
   if (process.env.OWL_DEBUG) {
     console.log('[owl] quiet refresh ->', JSON.stringify({
       ok: res.ok, needLogin: !!res.needLogin, error: res.error || null,
