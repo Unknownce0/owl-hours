@@ -366,8 +366,11 @@ function relative(d){
 function autoDone(it){
   if(it.todo) return false;
   var s = it.status || "";
-  if(/not submitted|not started/i.test(s)) return false;
-  if(/submitted|completed|graded|closed/i.test(s)) return true;
+  if(/not submitted|not started|no submission/i.test(s)) return false;
+  /* D2L writes "1 Submission, 1 File" for handed-in work - note "Submission",
+     not "Submitted", which an obvious-looking regex misses entirely. */
+  if(/\d+\s*submission/i.test(s)) return true;
+  if(/submitted|completed|graded|closed|feedback/i.test(s)) return true;
   if(it.earned != null) return true;
   return false;
 }
@@ -695,7 +698,7 @@ var SCRAPER = "javascript:(function(){var M={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5
 "function af(t,l){var i=t.indexOf(l);if(i<0)return null;var d=ds(t.slice(i+l.length,i+l.length+40));return d.length?d[0]:null}"+
 "function T(u){return fetch(u,{credentials:'same-origin'}).then(function(r){return r.text()})}"+
 "function G(u){return T(u).then(function(h){return new DOMParser().parseFromString(h,'text/html')})}"+
-"function PA(doc){var o=[],s={};doc.querySelectorAll('table').forEach(function(t){var hd=tx(t.querySelector('tr'));if(!/Assignment/i.test(hd)||!/Completion Status/i.test(hd))return;[].slice.call(t.querySelectorAll('tr'),1).forEach(function(tr){var c=[].slice.call(tr.querySelectorAll('th,td'));if(c.length<2)return;var raw=tx(c[0]);if(!raw||NO.test(raw))return;var n=cl(raw.split(CUT)[0]);if(!n||s[n])return;s[n]=1;var rt=tx(tr),a=tr.querySelector('a[href]'),sc=rt.match(/([\\d.]+|-)\\s*\\/\\s*([\\d.]+)/);var st='';c.slice(1).forEach(function(x){var v=tx(x);if(/Submitted|Draft|Completed/i.test(v)&&!st)st=v});"+
+"function PA(doc){var o=[],s={};doc.querySelectorAll('table').forEach(function(t){var hd=tx(t.querySelector('tr'));if(!/Assignment/i.test(hd)||!/Completion Status/i.test(hd))return;[].slice.call(t.querySelectorAll('tr'),1).forEach(function(tr){var c=[].slice.call(tr.querySelectorAll('th,td'));if(c.length<2)return;var raw=tx(c[0]);if(!raw||NO.test(raw))return;var n=cl(raw.split(CUT)[0]);if(!n||s[n])return;s[n]=1;var rt=tx(tr),a=tr.querySelector('a[href]'),sc=rt.match(/([\\d.]+|-)\\s*\\/\\s*([\\d.]+)/);var st='';c.slice(1).forEach(function(x){var v=tx(x);if(/Submitted|Submission|Draft|Completed|Graded|Feedback/i.test(v)&&!st)st=v});"+
 "o.push({t:'a',n:n,o:af(raw,'Available on'),d:af(raw,'Due on')||af(raw,'Available until')||af(raw,'Ends'),s:st||null,e:sc&&sc[1]!='-'?+sc[1]:null,p:sc?+sc[2]:null,u:a?a.getAttribute('href'):null})})});return o}"+
 "function PQ(doc,ou){var o=[],sec='Current';doc.querySelectorAll('table tr').forEach(function(tr){var rt=tx(tr);if(/^Past Quizzes/i.test(rt))sec='Past';else if(/^Current Quizzes/i.test(rt))sec='Current';var a=null;[].forEach.call(tr.querySelectorAll('a'),function(x){if(!a&&/GoToQuiz/.test(x.getAttribute('onclick')||''))a=x});if(!a)return;var q=((a.getAttribute('onclick')||'').match(/GoToQuiz\\((\\d+)/)||[])[1]||null;var n=cl(a.innerText);if(!n)return;var al=ds(rt);var d=af(rt,'Due on');if(!d){var ui=rt.indexOf(' until ');if(ui>=0){var x=ds(rt.slice(ui,ui+50));if(x.length)d=x[0]}}if(!d)d=al.length?al[al.length-1]:null;var op=af(rt,'Available on')||(al.length?al[0]:null);var at=rt.match(/(\\d+)\\s*\\/\\s*(\\d+)\\s*$/);"+
 "o.push({t:'q',n:n,sec:sec,o:op,d:d,at:at?+at[1]:null,am:at?+at[2]:null,u:q?'/d2l/lms/quizzing/user/quiz_summary.d2l?qi='+q+'&ou='+ou:null})});return o}"+
