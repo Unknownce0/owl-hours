@@ -116,6 +116,7 @@ a{color:var(--gold-ink)}
 .pill.stale{background:var(--gold-soft);color:var(--gold)}
 .pill.miss{background:var(--red-soft);color:var(--red)}
 .pill.todo{background:var(--gold-soft);color:var(--gold)}
+.pill.ok{background:var(--green-soft);color:var(--green)}
 .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
 
 /* ---------- filters ---------- */
@@ -359,10 +360,28 @@ function relative(d){
 }
 
 /* ---------- filtering ---------- */
+/* D2L and ALEKS already tell us what is finished - a submission status, a score,
+   a closed assignment. Read that instead of waiting to be told twice.
+   done[key] is the manual override: 1 = ticked by hand, 0 = un-ticked by hand. */
+function autoDone(it){
+  if(it.todo) return false;
+  var s = it.status || "";
+  if(/not submitted|not started/i.test(s)) return false;
+  if(/submitted|completed|graded|closed/i.test(s)) return true;
+  if(it.earned != null) return true;
+  return false;
+}
+function isDone(it){
+  var m = done[it.key];
+  if(m === 1) return true;
+  if(m === 0) return false;
+  return autoDone(it);
+}
+
 function visible(){
   return allItems().filter(function(it){
     if(it.course && ui.off[it.course]) return false;
-    if(ui.hideDone && done[it.key]) return false;
+    if(ui.hideDone && isDone(it)) return false;
     return true;
   });
 }
@@ -391,10 +410,10 @@ function pill(txt,cls,style){ return '<span class="pill '+(cls||"")+'"'+(style?'
 
 function rowHTML(it){
   var c = byId[it.course];
-  var isDone = !!done[it.key];
+  var complete = isDone(it);
   var stripe = it.todo ? "var(--gold)" : (c?c.color:"var(--line)");
-  var h = '<div class="row'+(isDone?" done":"")+'" style="--stripe:'+stripe+'">';
-  h += '<button class="chk" aria-pressed="'+isDone+'" data-check="'+esc(it.key)+'" aria-label="Mark '+esc(it.name)+' done">'+
+  var h = '<div class="row'+(complete?" done":"")+'" style="--stripe:'+stripe+'">';
+  h += '<button class="chk" aria-pressed="'+complete+'" data-check="'+esc(it.key)+'" aria-label="Mark '+esc(it.name)+' done">'+
        '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 6.2 4.4 9.2 10.5 2.8"/></svg></button>';
   h += '<div class="r-main"><div class="r-name">'+
        (it.url?'<a href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.name)+'</a>':esc(it.name))+
@@ -405,6 +424,7 @@ function rowHTML(it){
   if(it.status && /Not Submitted/i.test(it.status)) h += pill("not submitted","miss");
   if(it.maxAttempts) h += pill(it.attempts+"/"+it.maxAttempts+" attempts","pts");
   if(it.stale) h += pill("date looks stale","stale");
+  if(complete && done[it.key] !== 1) h += pill(/closed|completed/i.test(it.status||"") ? "done" : "submitted","ok");
   h += '</div></div>';
   h += '<div class="r-when">';
   if(it.due){
@@ -453,10 +473,10 @@ function renderAgenda(){
     });
   });
 
-  var live = vis.filter(function(i){ return !i.stale && !done[i.key]; });
-  var overdue = groups.overdue.filter(function(i){ return !done[i.key]; }).length;
+  var live = vis.filter(function(i){ return !i.stale && !isDone(i); });
+  var overdue = groups.overdue.filter(function(i){ return !isDone(i); }).length;
   var wk = live.filter(function(i){ var n=i.due?daysOut(i.due):null; return n!=null && n>=0 && n<=7; }).length;
-  var unsub = vis.filter(function(i){ return i.status && /Not Submitted/i.test(i.status) && !done[i.key]; }).length;
+  var unsub = vis.filter(function(i){ return i.status && /Not Submitted/i.test(i.status) && !isDone(i); }).length;
   var staleN = vis.filter(function(i){ return i.stale; }).length;
 
   var body = '';
@@ -489,7 +509,7 @@ function renderAgenda(){
 
   rail += '<div class="card"><div class="card-h"><h3>Classes</h3></div><div class="card-b"><div class="filters">'+
     courses.map(function(c){
-      var n = allItems().filter(function(i){ return i.course===c.id && !i.stale && !done[i.key]; }).length;
+      var n = allItems().filter(function(i){ return i.course===c.id && !i.stale && !isDone(i); }).length;
       var on = !ui.off[c.id];
       return '<button class="fchip" aria-pressed="'+on+'" data-filter="'+c.id+'">'+
              '<span class="dot" style="background:'+c.color+'"></span>'+
@@ -552,7 +572,7 @@ function renderCalendar(){
       h += '<button class="'+cls+'" data-day="'+key+'"><span class="dn">'+cur.getDate()+'</span>';
       evs.slice(0,3).forEach(function(e){
         var c = byId[e.course];
-        h += '<span class="ev'+(key<TODAY&&!done[e.key]?" late":"")+'" style="--stripe:'+(e.todo?"var(--gold)":(c?c.color:"var(--line)"))+'">'+esc(e.name)+'</span>';
+        h += '<span class="ev'+(key<TODAY&&!isDone(e)?" late":"")+'" style="--stripe:'+(e.todo?"var(--gold)":(c?c.color:"var(--line)"))+'">'+esc(e.name)+'</span>';
       });
       if(evs.length>3) h += '<span class="more mono">+'+(evs.length-3)+' more</span>';
       h += '</button>';
@@ -596,7 +616,7 @@ function renderClasses(){
       if(live.length){
         live.slice(0,14).forEach(function(i){
           var r = relative(i.due);
-          h += '<div class="mini"><span class="mn'+(done[i.key]?'" style="opacity:.45;text-decoration:line-through':'')+'">'+esc(i.name)+'</span>'+
+          h += '<div class="mini"><span class="mn'+(isDone(i)?'" style="opacity:.45;text-decoration:line-through':'')+'">'+esc(i.name)+'</span>'+
                '<span class="md" style="'+(r.c==="late"?"color:var(--red)":r.c==="hot"?"color:var(--gold)":"")+'">'+fmtDate(i.due)+'</span></div>';
         });
         if(live.length>14) h += '<p class="sub">+ '+(live.length-14)+' more with dates</p>';
@@ -1049,7 +1069,8 @@ document.addEventListener("click", function(e){
   var chk = e.target.closest ? e.target.closest("[data-check]") : null;
   if(chk){
     var k = chk.getAttribute("data-check");
-    if(done[k]) delete done[k]; else done[k] = 1;
+    var item = allItems().filter(function(i){ return i.key === k; })[0];
+    done[k] = item ? (isDone(item) ? 0 : 1) : (done[k] ? 0 : 1);
     save(K.done, done);
     if(ui.view==="agenda") renderAgenda();
     else if(ui.view==="calendar") renderCalendar();
