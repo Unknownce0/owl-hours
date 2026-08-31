@@ -95,6 +95,10 @@ Four things that will silently return nothing if you don't know them:
   `DOMParser` → `innerHTML`. Match it against the raw response text.
 - Courses copied forward from a previous year keep the previous year's dates. The app
   flags anything dated outside the current term instead of calling it overdue.
+- Quiz rows can carry **both** a due date and a wider availability window, e.g.
+  `Due on Aug 30 ... Available on Aug 24 ... until Dec 6`. The end of the availability
+  window is not the deadline — read `Due on` first and only fall back to `until` when
+  there is no stated due date. Getting this backwards buries an item months away.
 
 Discussion topics carry no due dates — they're forums.
 
