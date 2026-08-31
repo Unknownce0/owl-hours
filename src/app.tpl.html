@@ -259,6 +259,9 @@ details.br kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel);
 
 var DEFAULT_DATA = /*__DATA__*/null;
 var APP_VERSION  = /*__VERSION__*/"dev";
+/* A personal build carries its own coursework. Downloading the public
+   release would replace it with an empty one, so never offer that here. */
+var PERSONAL     = /*__PERSONAL__*/false;
 var REPO         = "Unknownce0/owl-hours";
 
 /* Fall 2026 term window. Anything due outside this is a leftover from a
@@ -774,7 +777,7 @@ function renderSync(){
   var state = isCustom ? "Your own D2L pull" : (isEmpty ? "No classes loaded yet" : "Built-in snapshot");
   h += '<p class="stat"><span class="dot" style="background:'+(isEmpty?"var(--red)":isCustom?"var(--green)":"var(--gold)")+'"></span>'+
        state + (when && !isEmpty ? " &middot; "+when.toLocaleString() : "")+'</p>';
-  h += '<p class="vstamp">Owl Hours '+esc(APP_VERSION)+' &middot; '+(DESKTOP?"desktop app":"web app")+
+  h += '<p class="vstamp">Owl Hours '+esc(APP_VERSION)+' &middot; '+(DESKTOP?(PERSONAL?"personal desktop build":"desktop app"):"web app")+
        (DESKTOP?" &middot; <a href=\"https://github.com/'+REPO+'/releases\" target=\"_blank\" rel=\"noopener\">releases</a>":"")+'</p>';
   h += '<p class="sub">Owl Hours can&rsquo;t reach D2L on its own &mdash; it&rsquo;s a sandboxed page and has no access to your login. You bring the data over with the button below. It stays in this browser, on this device: nobody else who opens this link can see it.</p>';
   h += '<p class="sub" id="safari-warn" style="display:none"><strong>Heads up, Safari:</strong> Safari deletes a site&rsquo;s saved data after 7 days without a visit. If you don&rsquo;t open Owl Hours for a week, your classes and checkmarks will be gone and you&rsquo;ll need to run the grabber again. Opening it every few days is enough to keep it. Chrome and Firefox don&rsquo;t do this.</p>';
@@ -1098,7 +1101,7 @@ function watchForNewBuild(){
   }).catch(function(){});
 }
 
-if(DESKTOP) checkForUpdate(); else watchForNewBuild();
+if(DESKTOP && !PERSONAL) checkForUpdate(); else if(!DESKTOP) watchForNewBuild();
 
 /* ---------- shell ---------- */
 var VIEWS = ["agenda","calendar","classes","grades","sync"];

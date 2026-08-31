@@ -155,7 +155,8 @@ def main():
     if priv_for_desktop:
         raw_pd, parsed_pd = priv_for_desktop
         personal = (HEAD.replace("__MANIFEST__", "")
-                    + render(raw_pd) + TAIL.replace("__SW__", ""))
+                    + render(raw_pd).replace('/*__PERSONAL__*/false', 'true')
+                    + TAIL.replace("__SW__", ""))
         os.makedirs(os.path.join(HERE, "private", "desktop"), exist_ok=True)
         open(os.path.join(HERE, "private", "desktop", "index.html"), "w").write(personal)
         n = sum(len(c.get("items", [])) for c in parsed_pd["courses"])
