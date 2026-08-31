@@ -149,6 +149,18 @@ def main():
     shutil.copytree(os.path.join(HERE, "icons"), icons_dst)
     built.append(("electron/app/index.html", len(desktop)))
 
+    # 2b. A personal desktop copy with the data already inside, so it works on
+    #     open with nothing to connect. Never published; this is Kachi's machine.
+    priv_for_desktop = load_private_data()
+    if priv_for_desktop:
+        raw_pd, parsed_pd = priv_for_desktop
+        personal = (HEAD.replace("__MANIFEST__", "")
+                    + render(raw_pd) + TAIL.replace("__SW__", ""))
+        os.makedirs(os.path.join(HERE, "private", "desktop"), exist_ok=True)
+        open(os.path.join(HERE, "private", "desktop", "index.html"), "w").write(personal)
+        n = sum(len(c.get("items", [])) for c in parsed_pd["courses"])
+        built.append(("private/desktop/index.html (personal, %d items)" % n, len(personal)))
+
     # 3. the Claude artifact keeps its baked-in snapshot (fragment, not a document)
     priv = load_private_data()
     if priv:
