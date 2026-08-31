@@ -109,6 +109,8 @@ def load_private_data():
     if added:
         print("  merged %d item(s) from private/extra-items.json" % added)
         raw = json.dumps(parsed, ensure_ascii=False, separators=(",", ":"))
+    # What the sync publisher should send: D2L plus everything D2L can't see.
+    open(os.path.join(HERE, "private", "data-merged.json"), "w").write(raw)
     return raw, parsed
 
 

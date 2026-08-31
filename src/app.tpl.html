@@ -837,8 +837,28 @@ function renderSync(){
 /* ---------- the desktop app can talk to D2L itself ---------- */
 var DESKTOP = !!(window.owl && window.owl.isDesktop);
 
+/* Items flagged x:1 come from somewhere D2L can't see (ALEKS, hand-added work).
+   A refresh replaces the whole dataset, so carry them over or they vanish. */
+function keepExtras(next){
+  if(!next || !next.courses) return next;
+  var mine = {};
+  (DATA.courses||[]).forEach(function(c){
+    var extras = (c.items||[]).filter(function(i){ return i.x; });
+    if(extras.length) mine[c.id] = extras;
+  });
+  next.courses.forEach(function(c){
+    var extras = mine[c.id];
+    if(!extras) return;
+    var have = {};
+    (c.items||[]).forEach(function(i){ have[i.n] = 1; });
+    extras.forEach(function(i){ if(!have[i.n]) (c.items = c.items || []).push(i); });
+  });
+  return next;
+}
+
 function applyData(j, note){
   if(!j || !j.courses || !j.courses.length) return false;
+  j = keepExtras(j);
   if(JSON.stringify(j) === JSON.stringify(DATA)){ if(note) note("Already up to date."); return true; }
   save(K.data, j);
   if(note) note("Got "+j.courses.length+" classes. Reloading\u2026");
@@ -893,6 +913,7 @@ function pullSync(silent, say){
     return decryptIfNeeded(raw, key);
   }).then(function(j){
     if(!j || !j.courses || !j.courses.length) throw new Error("no classes in that data");
+    j = keepExtras(j);
     if(JSON.stringify(j) === JSON.stringify(DATA)){ if(say) say("Already up to date."); return; }
     save(K.data, j);
     /* one reload per page-open, so an auto-pull can never spin */

@@ -14,7 +14,11 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
-const DATA = path.join(ROOT, 'private', 'data.json');
+// Prefer the merged file build.py writes: it carries ALEKS and anything else
+// D2L cannot see. Fall back to the raw scrape if a build hasn't run yet.
+const MERGED = path.join(ROOT, 'private', 'data-merged.json');
+const RAW = path.join(ROOT, 'private', 'data.json');
+const DATA = fs.existsSync(MERGED) ? MERGED : RAW;
 const STATE = path.join(ROOT, 'private', 'sync-state.json');
 const PAYLOAD = path.join(ROOT, 'private', 'owl-hours-data.json');
 const GIST_FILE = 'owl-hours-data.json';
@@ -33,7 +37,7 @@ function gh(args) {
   }
 }
 
-if (!fs.existsSync(DATA)) die('private/data.json not found — run a D2L scrape first.');
+if (!fs.existsSync(DATA)) die('no data found — run a D2L scrape and then build.py first.');
 const plaintext = fs.readFileSync(DATA);
 const parsed = JSON.parse(plaintext);
 if (!parsed.courses || !parsed.courses.length) die('private/data.json has no courses; refusing to publish.');
