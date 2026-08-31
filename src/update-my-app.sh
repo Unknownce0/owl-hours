@@ -27,8 +27,20 @@ echo "==> patching"
 rm -rf "$WORK"; mkdir -p "$WORK"; cd "$WORK"
 npm i @electron/asar --silent --no-audit --no-fund >/dev/null 2>&1
 node -e "require('@electron/asar').extractAll(process.argv[1],'unpacked')" "$ASAR"
+
+# Replace EVERY file we build, not just the page. The app runs its own copy of
+# the scraper, so leaving a stale grabber-return.js means the app re-scrapes on
+# launch with the old parser and immediately overwrites the corrected data.
 cp "$ROOT/private/desktop/index.html" unpacked/app/index.html
+for f in grabber-return.js d2l.js main.js preload.js; do
+  cp "$ROOT/electron/$f" "unpacked/$f"
+done
 node -e "require('@electron/asar').createPackage('unpacked',process.argv[1])" "$ASAR"
+
+# The app prefers whatever is in localStorage over the freshly baked data, so a
+# stale store would hide this update entirely. Drop it and let the app reload.
+echo "==> clearing the old stored copy"
+rm -rf "$HOME/Library/Application Support/Owl Hours/Local Storage"
 
 echo "==> re-signing"
 # repacking breaks the signature; unsigned means macOS calls it damaged
