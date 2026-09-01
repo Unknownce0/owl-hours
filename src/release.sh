@@ -31,6 +31,13 @@ python3 build.py
 node src/make_grabbers.js
 
 if [ -n "$VERSION" ]; then
+  # The toolchain gets deleted between releases to reclaim ~540MB, so install it
+  # here rather than failing at packaging — after the version bump and push have
+  # already happened, which leaves a tagged commit with no release attached.
+  if [ ! -d electron/node_modules/electron/dist ]; then
+    echo "==> installing the build toolchain (~540MB, one time)"
+    ( cd electron && npm install --no-audit --no-fund --silent )
+  fi
   echo "==> building installers (a few minutes)"
   ( cd electron && npx electron-builder --mac --win )
   echo "==> checking the package is complete"

@@ -1,7 +1,7 @@
 /* Owl Hours service worker.
    The app is one HTML file plus icons, and all coursework lives in localStorage,
    so caching the shell is enough to make it work with no signal at all. */
-const CACHE = 'owl-hours-1.0.2';
+const CACHE = 'owl-hours-1.0.3';
 const SHELL = [
   './',
   './index.html',

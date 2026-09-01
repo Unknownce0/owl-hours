@@ -1,7 +1,7 @@
 {
   "name": "owl-hours",
   "productName": "Owl Hours",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Your Kennesaw State coursework in one place.",
   "main": "main.js",
   "private": true,
@@ -55,10 +55,11 @@
     "portable": {
       "artifactName": "Owl-Hours-Windows.exe"
     },
-    "afterPack": "build/adhoc-sign.js"
+    "afterPack": "build/adhoc-sign.js",
+    "electronVersion": "33.4.11"
   },
   "devDependencies": {
-    "electron": "^33.0.0",
+    "electron": "33.4.11",
     "electron-builder": "^25.1.8"
   }
 }
