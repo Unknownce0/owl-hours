@@ -32,8 +32,10 @@ node -e "require('@electron/asar').extractAll(process.argv[1],'unpacked')" "$ASA
 # the scraper, so leaving a stale grabber-return.js means the app re-scrapes on
 # launch with the old parser and immediately overwrites the corrected data.
 cp "$ROOT/private/desktop/index.html" unpacked/app/index.html
-for f in grabber-return.js d2l.js main.js preload.js; do
-  cp "$ROOT/electron/$f" "unpacked/$f"
+# Copy every top-level .js, not a hand-kept list. A forgotten entry ships an
+# app that builds fine and dies on require() - that has happened twice now.
+for f in "$ROOT"/electron/*.js; do
+  cp "$f" "unpacked/$(basename "$f")"
 done
 node -e "require('@electron/asar').createPackage('unpacked',process.argv[1])" "$ASAR"
 

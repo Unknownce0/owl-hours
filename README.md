@@ -102,6 +102,31 @@ Four things that will silently return nothing if you don't know them:
 
 Discussion topics carry no due dates — they're forums.
 
+## ALEKS
+
+Classes that run their work in ALEKS (Precalculus, Chemistry) look empty in D2L, because
+D2L genuinely holds nothing for them. The desktop app can pull them in: **Sync D2L →
+Pull my ALEKS work**.
+
+- The launch link is discovered per course from D2L's own content API,
+  `/d2l/api/le/1.67/{ou}/content/toc`, by finding an LTI topic whose title mentions
+  ALEKS. Nothing is hardcoded, so it works for any course that has one.
+- ALEKS itself has no usable API — it is a CGI app posting to opaque session URLs — so
+  the app drives the real UI in a window.
+- The assignments grid tags every cell with a semantic class (`column-displayDueDate`,
+  `column-progress`, `column-displayStatus`). Read by those, never by column position.
+- **ALEKS allows one session per account.** Launching it signs the user out of ALEKS
+  everywhere else, which is why this is a button and never part of the automatic
+  refresh. A background pull would eject someone mid-homework.
+- Imported items are flagged `x:1`, so a later D2L refresh keeps them.
+
+Three things that cost time when building this:
+- The class list renders after its title is set, so waiting on `document.title` alone
+  lands on a page still showing "Loading". Wait for a tile.
+- The class tile is a custom element; a DOM `.click()` on its label does nothing.
+  Send a real mouse event at its coordinates instead.
+- Entering the class is a full navigation, which destroys anything injected before it.
+
 ## Browser notes
 
 - The grabber hands data over through an on-page panel with its own Copy button rather

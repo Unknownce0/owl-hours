@@ -30,6 +30,7 @@ echo "packaged contents:"
 check main.js
 check preload.js
 check d2l.js
+check aleks.js
 check grabber-return.js
 check app/index.html
 check build/icon.png

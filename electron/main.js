@@ -1,6 +1,7 @@
 const { app, BrowserWindow, shell, Menu, ipcMain } = require('electron');
 const path = require('path');
 const d2l = require('./d2l');
+const aleks = require('./aleks');
 
 let mainWindow = null;
 const REFRESH_EVERY = 6 * 60 * 60 * 1000;   // re-check D2L every six hours
@@ -72,6 +73,31 @@ ipcMain.handle('owl:grab', async (_e, interactive) => {
 });
 
 ipcMain.handle('owl:signout', () => d2l.signOut());
+
+/* ALEKS is manual on purpose: it allows one session per account, so a
+   background pull would sign the user out of ALEKS mid-homework. */
+ipcMain.handle('owl:aleks', async (_e, courseIds) => {
+  const res = await aleks.pull(courseIds || [], (text) => send('owl:status', text));
+  if (!res.ok) return res;
+  // shape ALEKS rows like everything else, flagged x:1 so a D2L refresh keeps them
+  const courses = res.courses.map((c) => ({
+    ou: c.ou,
+    items: c.items.map((i) => {
+      const done = /closed/i.test(i.status) || i.pct === 100;
+      return {
+        t: /quiz|test|exam/i.test(i.type) ? 'q' : 'a',
+        n: i.n + '  (ALEKS)',
+        d: i.d || undefined,
+        o: i.o || undefined,
+        s: done ? 'Completed' : 'Not Submitted',
+        e: i.pct != null ? i.pct : undefined,
+        p: i.pct != null ? 100 : undefined,
+        x: 1
+      };
+    })
+  }));
+  return { ok: true, courses, skipped: res.skipped };
+});
 
 /* A quiet attempt on launch, then on a timer. If the session has lapsed we say
    nothing and wait for the user to ask — no surprise login windows. */

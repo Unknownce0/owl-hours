@@ -784,6 +784,14 @@ function renderSync(){
   h += '</div></div>';
 
   if(DESKTOP){
+    h += '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Classes that use ALEKS</h3></div><div class="card-b">';
+    h += '<p class="sub" style="padding-top:0">D2L can&rsquo;t see ALEKS, so a class that runs its work there &mdash; Precalculus, Chemistry &mdash; looks empty. '+
+         'This reads your ALEKS assignments and folds them in, and they survive every later D2L refresh.</p>';
+    h += '<p class="sub"><strong>It signs you out of ALEKS everywhere else.</strong> ALEKS only allows one session at a time, which is why this is a button and not automatic &mdash; '+
+         'a background check would kick you out mid-homework. Don&rsquo;t press it while you&rsquo;re working in ALEKS.</p>';
+    h += '<button class="btn" id="a-pull">Pull my ALEKS work</button>';
+    h += '<p class="sub" id="a-msg"></p></div></div>';
+
     h += '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Your D2L sign-in</h3></div><div class="card-b">';
     h += '<p class="sub" style="padding-top:0">This app keeps its own D2L session, so you sign in once and it refreshes itself '+
          'from then on &mdash; on launch and every few hours. No bookmarklet needed here.</p>';
@@ -831,6 +839,34 @@ function renderSync(){
   document.getElementById("v-sync").innerHTML = h;
 
   if(DESKTOP){
+    var am = document.getElementById("a-msg");
+    var asay = function(s){ if(am) am.textContent = s; };
+    window.owl.onStatus(asay);
+    document.getElementById("a-pull").onclick = function(){
+      var btn = this;
+      btn.disabled = true; btn.textContent = "Reading ALEKS\u2026";
+      asay("Opening ALEKS\u2026");
+      window.owl.pullAleks(courses.map(function(c){ return c.id; })).then(function(res){
+        btn.disabled = false; btn.textContent = "Pull my ALEKS work";
+        if(!res || !res.ok){ asay(res && res.needLogin ? "Sign in to D2L first, then try again."
+                                                       : "Couldn\u2019t read ALEKS: "+((res&&res.error)||"unknown problem")); return; }
+        /* merge into the stored copy, replacing any previous ALEKS pull */
+        var next = JSON.parse(JSON.stringify(DATA));
+        var added = 0;
+        res.courses.forEach(function(rc){
+          var course = next.courses.filter(function(c){ return c.id === rc.ou; })[0];
+          if(!course) return;
+          course.items = (course.items||[]).filter(function(i){ return !i.x; });
+          rc.items.forEach(function(i){ course.items.push(i); added++; });
+        });
+        save(K.data, next);
+        asay("Loaded "+added+" ALEKS items. Reloading\u2026");
+        setTimeout(function(){ location.reload(); }, 700);
+      }, function(e){
+        btn.disabled = false; btn.textContent = "Pull my ALEKS work";
+        asay("Couldn\u2019t read ALEKS: "+e);
+      });
+    };
     var dm = document.getElementById("d-msg");
     var dsay = function(s){ if(dm) dm.textContent = s; };
     window.owl.onStatus(dsay);
