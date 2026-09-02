@@ -100,7 +100,10 @@ Four things that will silently return nothing if you don't know them:
   window is not the deadline — read `Due on` first and only fall back to `until` when
   there is no stated due date. Getting this backwards buries an item months away.
 
-Discussion topics carry no due dates — they're forums.
+Discussion topics often DO carry a due date, shown as `Due on ...` a couple of levels
+above the topic link rather than on the link itself. Walk up from the anchor, but cap the
+walk (4 levels) and ignore any container over ~320 characters — otherwise a topic with no
+date swallows the whole table and picks up a neighbour's.
 
 ## ALEKS
 
