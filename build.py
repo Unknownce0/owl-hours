@@ -114,6 +114,21 @@ def load_private_data():
     return raw, parsed
 
 
+def regenerate_grabbers():
+    """Rebuild the grabber flavours from the template.
+
+    They are derived from the same source as everything else, so leaving this to
+    a separate command means any path that forgets it ships a stale scraper —
+    which then overwrites good data the moment the app refreshes.
+    """
+    import subprocess
+    r = subprocess.run(["node", os.path.join(HERE, "src", "make_grabbers.js")],
+                       cwd=HERE, capture_output=True, text=True)
+    if r.returncode != 0:
+        sys.exit("refusing to build: make_grabbers failed\n" + (r.stderr or r.stdout))
+    return [l.strip() for l in r.stdout.strip().splitlines() if l.strip()]
+
+
 def main():
     built = []
 
@@ -173,6 +188,10 @@ def main():
                       % (len(parsed["courses"]), n_items), len(frag)))
     else:
         print("  note: private/data.json absent — skipping the artifact build")
+
+    # must happen after index.html is written: the grabbers are extracted from it
+    for line in regenerate_grabbers():
+        print("  " + line)
 
     print("  version %s" % app_version())
     for name, size in built:
