@@ -76,6 +76,9 @@ ipcMain.handle('owl:signout', () => d2l.signOut());
 
 /* ALEKS is manual on purpose: it allows one session per account, so a
    background pull would sign the user out of ALEKS mid-homework. */
+/* Safe to call any time: it looks at D2L only and never opens ALEKS. */
+ipcMain.handle('owl:alekscheck', (_e, courseIds) => aleks.findCourses(courseIds || []));
+
 ipcMain.handle('owl:aleks', async (_e, courseIds) => {
   const res = await aleks.pull(courseIds || [], (text) => send('owl:status', text));
   if (!res.ok) return res;

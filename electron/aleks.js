@@ -231,4 +231,29 @@ async function pull(courseIds, say = () => {}) {
   }
 }
 
-module.exports = { pull };
+/**
+ * Which courses have an ALEKS link? Queries D2L only — no ALEKS session is
+ * opened, so this is safe to run whenever, unlike pull().
+ */
+async function findCourses(courseIds) {
+  const win = new BrowserWindow({
+    show: false, width: 900, height: 700,
+    webPreferences: { partition: PARTITION, contextIsolation: true, nodeIntegration: false, sandbox: true }
+  });
+  try {
+    await new Promise((r) => {
+      win.webContents.once('did-finish-load', r);
+      win.webContents.once('did-fail-load', r);
+      win.loadURL(D2L + '/d2l/home');
+    });
+    if (!/view\.usg\.edu/.test(win.webContents.getURL())) { win.destroy(); return []; }
+    const links = await findLaunchLinks(win, courseIds);
+    win.destroy();
+    return links.map((l) => l.ou);
+  } catch (e) {
+    if (!win.isDestroyed()) win.destroy();
+    return [];
+  }
+}
+
+module.exports = { pull, findCourses };
