@@ -67,8 +67,13 @@ rate-limited, blocked — nothing is shown.
     cd electron && npm start     # run the desktop app
     cd electron && npm run dist  # build .dmg and .exe into ../dist
 
-`src/app.tpl.html` is the only source file for the UI — everything else is generated.
-Never edit `index.html` directly.
+`src/app.tpl.html` is the only source file for the UI — everything else is generated,
+including the grabber flavours, which `build.py` regenerates on every run. Never edit
+`index.html` or `electron/grabber-return.js` directly.
+
+**A stale grabber is worse than a missing one.** The app runs its own copy of the scraper
+and refreshes on launch, so shipping an old `grabber-return.js` doesn't just fail to fix
+anything — it overwrites correct data with badly-parsed data seconds after the app opens.
 
 **If you add a file under `electron/`, add it to `build.files` in `electron/package.json`.**
 That setting is an allowlist, not a filter: a missing entry produces an installer that
