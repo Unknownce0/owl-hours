@@ -733,6 +733,31 @@ var SCRAPER = "javascript:(function(){var M={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5
 "o.push({t:'a',n:n,o:af(raw,'Available on'),d:af(raw,'Due on')||af(raw,'Available until')||af(raw,'Ends'),s:st||null,e:sc&&sc[1]!='-'?+sc[1]:null,p:sc?+sc[2]:null,u:a?a.getAttribute('href'):null})})});return o}"+
 "function PQ(doc,ou){var o=[],sec='Current';doc.querySelectorAll('table tr').forEach(function(tr){var rt=tx(tr);if(/^Past Quizzes/i.test(rt))sec='Past';else if(/^Current Quizzes/i.test(rt))sec='Current';var a=null;[].forEach.call(tr.querySelectorAll('a'),function(x){if(!a&&/GoToQuiz/.test(x.getAttribute('onclick')||''))a=x});if(!a)return;var q=((a.getAttribute('onclick')||'').match(/GoToQuiz\\((\\d+)/)||[])[1]||null;var n=cl(a.innerText);if(!n)return;var al=ds(rt);var d=af(rt,'Due on');if(!d){var ui=rt.indexOf(' until ');if(ui>=0){var x=ds(rt.slice(ui,ui+50));if(x.length)d=x[0]}}if(!d)d=al.length?al[al.length-1]:null;var op=af(rt,'Available on')||(al.length?al[0]:null);var at=rt.match(/(\\d+)\\s*\\/\\s*(\\d+|Unlimited)\\s*$/i);"+
 "o.push({t:'q',n:n,sec:sec,o:op,d:d,at:at?+at[1]:null,am:at?(/^\\d+$/.test(at[2])?+at[2]:0):null,u:q?'/d2l/lms/quizzing/user/quiz_summary.d2l?qi='+q+'&ou='+ou:null})});return o}"+
+/* D2L's discussion list shows class-wide counts, never whether YOU posted.
+   The API does: a post with no ParentPostId is an initial post, one with a
+   parent is a reply - exactly the two halves these rubrics grade. */
+"var SUB=' \\u2014 initial post';" +
+/* A topic with a rubric produces two items: the initial post and the reply.
+   Match each to the right half of what the user actually posted. */
+"function MARKD(items,posts){if(!posts)return items;" +
+"var hasSub={};items.forEach(function(i){if(i.sub)hasSub[i.n.replace(SUB,'')]=1});" +
+"return items.map(function(i){if(i.t!=='d')return i;" +
+"var base=i.n.replace(SUB,'');var p=posts[base];if(!p)return i;" +
+"var done=i.sub?p.i:(hasSub[base]?p.r:(p.i||p.r));" +
+"i.s=done?'Completed':'Not Submitted';return i})}" +
+"var API='/d2l/api/le/1.67/';" +
+"function DPOSTS(ou,me){if(!me)return Promise.resolve({});" +
+"return T(API+ou+'/discussions/forums/').then(function(s){var f=[];try{f=JSON.parse(s)}catch(e){}" +
+"if(!f.length)return {};" +
+"return Promise.all(f.map(function(x){return T(API+ou+'/discussions/forums/'+x.ForumId+'/topics/').then(function(ts){" +
+"try{return JSON.parse(ts).map(function(t){return {f:x.ForumId,t:t.TopicId,n:t.Name}})}catch(e){return []}})}))" +
+".then(function(ls){var all=[].concat.apply([],ls);" +
+"return Promise.all(all.map(function(t){return T(API+ou+'/discussions/forums/'+t.f+'/topics/'+t.t+'/posts/').then(function(ps){" +
+"var arr=[];try{arr=JSON.parse(ps)}catch(e){}" +
+"var mine=arr.filter(function(p){return String(p.PostingUserId)===String(me)});" +
+"return {n:t.n,i:mine.some(function(p){return !p.ParentPostId}),r:mine.some(function(p){return !!p.ParentPostId})}" +
+"}).catch(function(){return {n:t.n,i:false,r:false}})}))})" +
+".then(function(rs){var m={};rs.forEach(function(x){m[x.n]={i:x.i,r:x.r}});return m})}).catch(function(){return {}})}" +
 "function PD(doc){var o=[],s={};" +
 /* D2L's due date on a discussion is the LAST deadline. Many topics set an
    earlier one for the initial post inside the rubric, which lives in a
@@ -746,11 +771,12 @@ var SCRAPER = "javascript:(function(){var M={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5
 "function PG(doc){var o=[],s={};doc.querySelectorAll('table').forEach(function(t){if(!/Grade Item/i.test(tx(t.querySelector('tr'))))return;[].slice.call(t.querySelectorAll('tr'),1).forEach(function(tr){var c=[].slice.call(tr.querySelectorAll('th,td')).map(tx).filter(function(x){return x!==''});if(c.length<2)return;var n=c[0];if(!n||NO.test(n)||s[n])return;s[n]=1;var pm=null;c.forEach(function(x){if(!pm&&/\\/\\s*[\\d.]+/.test(x))pm=x.match(/([\\d.]+|-)\\s*\\/\\s*([\\d.]+)/)});var pc=null;c.forEach(function(x){if(pc===null&&/%\\s*$/.test(x)&&!/^-/.test(x))pc=parseFloat(x)});"+
 "o.push({n:n,e:pm&&pm[1]!='-'?+pm[1]:null,p:pm?+pm[2]:null,pc:pc})})});return o}"+
 "var m=location.pathname.match(/^\\/d2l/);if(!location.hostname.match(/view\\.usg\\.edu$/)){alert('Owl Hours: run this while you are on your D2L page.');return}"+
-"fetch('/d2l/lp/courseSelector/6629/InitPartial',{credentials:'same-origin'}).then(function(r){return r.text()}).then(function(raw){"+
+"return T('/d2l/api/lp/1.30/users/whoami').then(function(s){var ME=null;try{ME=JSON.parse(s).Identifier}catch(e){}return ME}).catch(function(){return null}).then(function(ME){"+
+"return fetch('/d2l/lp/courseSelector/6629/InitPartial',{credentials:'same-origin'}).then(function(r){return r.text()}).then(function(raw){"+
 "var seen={},ids=[];(raw.match(/\\/d2l\\/home\\/(\\d+)/g)||[]).forEach(function(s){var i=s.split('/').pop();if(!seen[i]){seen[i]=1;ids.push(i)}});"+
 "if(!ids.length){alert('Owl Hours: no courses found. Are you signed in?');return}"+
-"return Promise.all(ids.map(function(ou){return Promise.all([T('/d2l/home/'+ou),G('/d2l/lms/dropbox/user/folders_list.d2l?ou='+ou+'&isprv=0'),G('/d2l/lms/quizzing/user/quizzes_list.d2l?ou='+ou),G('/d2l/le/'+ou+'/discussions/List'),G('/d2l/lms/grades/my_grades/main.d2l?ou='+ou)]).then(function(p){"+
-"var hc=(p[0].match(/CO\\.\\d+\\.([A-Z]{2,4})(\\d{3,4}[A-Z]?)/)||[]);var tt=(p[0].match(/<title>([\\s\\S]*?)<\\/title>/)||[])[1]||('Course '+ou);tt=cl(tt).replace(/&amp;/g,'&').replace(/&#39;/g,String.fromCharCode(39)).replace(/&quot;/g,'\"');return{id:ou,code:hc[1]?hc[1]+' '+hc[2]:null,title:tt.replace(/^Homepage\\s*-\\s*/,'').replace(/\\s*Fall Semester \\d{4} CO\\s*$/,''),items:PA(p[1]).concat(PQ(p[2],ou)).concat(PD(p[3])),grades:PG(p[4]),fc:FC(p[4])}}).catch(function(e){return{id:ou,title:'Course '+ou,items:[],grades:[]}})})).then(function(cs){"+
+"return Promise.all(ids.map(function(ou){return Promise.all([T('/d2l/home/'+ou),G('/d2l/lms/dropbox/user/folders_list.d2l?ou='+ou+'&isprv=0'),G('/d2l/lms/quizzing/user/quizzes_list.d2l?ou='+ou),G('/d2l/le/'+ou+'/discussions/List'),G('/d2l/lms/grades/my_grades/main.d2l?ou='+ou),DPOSTS(ou,ME)]).then(function(p){"+
+"var hc=(p[0].match(/CO\\.\\d+\\.([A-Z]{2,4})(\\d{3,4}[A-Z]?)/)||[]);var tt=(p[0].match(/<title>([\\s\\S]*?)<\\/title>/)||[])[1]||('Course '+ou);tt=cl(tt).replace(/&amp;/g,'&').replace(/&#39;/g,String.fromCharCode(39)).replace(/&quot;/g,'\"');return{id:ou,code:hc[1]?hc[1]+' '+hc[2]:null,title:tt.replace(/^Homepage\\s*-\\s*/,'').replace(/\\s*Fall Semester \\d{4} CO\\s*$/,''),items:MARKD(PA(p[1]).concat(PQ(p[2],ou)).concat(PD(p[3])),p[5]),grades:PG(p[4]),fc:FC(p[4])}}).catch(function(e){return{id:ou,title:'Course '+ou,items:[],grades:[]}})})).then(function(cs){"+
 "var out=JSON.stringify({v:1,scrapedAt:new Date().toISOString(),courses:cs});"+
 "var n=cs.reduce(function(a,c){return a+c.items.length},0);"+
 "var W=document.createElement('div');"+
@@ -776,7 +802,7 @@ var SCRAPER = "javascript:(function(){var M={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5
 "CL.onclick=function(){if(W.parentNode)W.parentNode.removeChild(W)};"+
 "W.onclick=function(e){if(e.target===W&&W.parentNode)W.parentNode.removeChild(W)};"+
 "R.appendChild(CP);R.appendChild(CL);B.appendChild(H);B.appendChild(M);B.appendChild(TA);B.appendChild(R);W.appendChild(B);document.body.appendChild(W);sel();"+
-"})}).catch(function(e){alert('Owl Hours: '+e)})})();";
+"})}).catch(function(e){alert('Owl Hours: '+e)})})})();";
 
 function renderSync(){
   var when = DATA.scrapedAt ? new Date(DATA.scrapedAt) : null;

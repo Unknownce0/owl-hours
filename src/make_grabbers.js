@@ -47,7 +47,11 @@ let ret = code.slice(0, a) + 'return out;' + code.slice(b + endMark.length);
 // the outer IIFE has to hand its promise back to executeJavaScript
 const fetchStart = "fetch('/d2l/lp/courseSelector/6629/InitPartial'";
 if (!ret.includes(fetchStart)) { console.error('scrape entry point not found'); process.exit(1); }
-ret = ret.replace(fetchStart, 'return ' + fetchStart);
+// The chain may already return (it does once whoami wraps it). Injecting a
+// second `return` produced `return return fetch(...)`.
+if (!ret.includes('return ' + fetchStart)) {
+  ret = ret.replace(fetchStart, 'return ' + fetchStart);
+}
 const retSwaps = [
   ["alert('Owl Hours: run this while you are on your D2L page.');return",
    "return 'ERROR:NOTD2L';"],
