@@ -299,7 +299,34 @@ function load(k,f){ try{ var s=localStorage.getItem(k); return s?JSON.parse(s):f
 function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
 
 var stored   = load(K.data,null);
-var DATA     = stored || DEFAULT_DATA || {v:1,courses:[]};
+
+/* An update ships a fresh snapshot baked in, but the browser copy is usually
+   newer still — it came from a live scrape. Pick whichever was scraped last
+   rather than blindly preferring either, so an update never throws away work
+   you have since submitted, and a stale copy never hides an update. */
+function scrapeTime(d){ return d && d.scrapedAt ? (Date.parse(d.scrapedAt) || 0) : 0; }
+function carryExtras(from, into){
+  if(!from || !into || !into.courses) return into;
+  var mine = {};
+  (from.courses||[]).forEach(function(c){
+    var ex = (c.items||[]).filter(function(i){ return i.x; });
+    if(ex.length) mine[c.id] = ex;
+  });
+  into.courses.forEach(function(c){
+    var ex = mine[c.id]; if(!ex) return;
+    var have = {}; (c.items||[]).forEach(function(i){ have[i.n] = 1; });
+    ex.forEach(function(i){ if(!have[i.n]) (c.items = c.items || []).push(i); });
+  });
+  return into;
+}
+
+var DATA;
+if(stored && DEFAULT_DATA && scrapeTime(DEFAULT_DATA) > scrapeTime(stored)){
+  DATA = carryExtras(stored, JSON.parse(JSON.stringify(DEFAULT_DATA)));
+  save(K.data, DATA);                      /* keep the newer one */
+} else {
+  DATA = stored || DEFAULT_DATA || {v:1,courses:[]};
+}
 var isCustom = !!stored;
 var isEmpty  = !DATA.courses || !DATA.courses.length;
 var sync     = load(K.sync,{url:"",auto:false});

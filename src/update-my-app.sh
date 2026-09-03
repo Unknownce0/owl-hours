@@ -39,10 +39,10 @@ for f in "$ROOT"/electron/*.js; do
 done
 node -e "require('@electron/asar').createPackage('unpacked',process.argv[1])" "$ASAR"
 
-# The app prefers whatever is in localStorage over the freshly baked data, so a
-# stale store would hide this update entirely. Drop it and let the app reload.
-echo "==> clearing the old stored copy"
-rm -rf "$HOME/Library/Application Support/Owl Hours/Local Storage"
+# Deliberately NOT clearing Local Storage. It holds the live-scraped data, your
+# ticked-off items, what-if grades and the ALEKS timestamp — wiping it on every
+# update threw all of that away. The app compares scrapedAt and takes whichever
+# copy is newer, so an update lands without destroying anything.
 
 echo "==> re-signing"
 # repacking breaks the signature; unsigned means macOS calls it damaged

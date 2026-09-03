@@ -46,6 +46,16 @@ Installing from the browser avoids all of this.
 To keep several devices in step, host the grabber's output somewhere both can reach and
 put that address in **Sync across your devices**.
 
+## State that must survive an update
+
+`localStorage` holds the live-scraped data, ticked-off items, what-if grades and the
+ALEKS timestamp. An earlier version of `update-my-app.sh` deleted it on every update,
+because the app preferred stored data and a stale copy could hide a fix — which meant
+every update silently threw away work the user had since submitted.
+
+The app now compares `scrapedAt` and keeps whichever copy is newer, carrying `x:1`
+items across either way. **Never clear Local Storage as part of shipping an update.**
+
 ## Updates
 
 The web app updates itself. When a new build is deployed the service worker picks it up
