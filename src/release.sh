@@ -38,8 +38,19 @@ if [ -n "$VERSION" ]; then
     echo "==> installing the build toolchain (~540MB, one time)"
     ( cd electron && npm install --no-audit --no-fund --silent )
   fi
+  # Packaging the Windows exe stamps it via Wine, which is Intel-only and so
+  # needs Rosetta. Without it the whole run aborts and takes the Mac build with
+  # it, so build only what this machine can actually produce.
+  TARGETS="--mac"
+  if arch -x86_64 /usr/bin/true >/dev/null 2>&1; then
+    TARGETS="--mac --win"
+  else
+    echo "!!  Rosetta is not installed, so the Windows build is being skipped."
+    echo "    Windows users stay on the previous release until it is available."
+    echo "    To enable it:  softwareupdate --install-rosetta --agree-to-license"
+  fi
   echo "==> building installers (a few minutes)"
-  ( cd electron && npx electron-builder --mac --win )
+  ( cd electron && npx electron-builder $TARGETS )
   echo "==> checking the package is complete"
   ./src/verify-build.sh || { echo "build incomplete, nothing published"; exit 1; }
 fi

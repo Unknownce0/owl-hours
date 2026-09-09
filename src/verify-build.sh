@@ -9,6 +9,15 @@ OUT=/tmp/owl-verify-$$
 FAIL=0
 
 [ -f "$ASAR" ] || { echo "no packaged app at $ASAR"; exit 1; }
+
+# A failed build leaves the previous unpacked app behind, so "the file exists"
+# is not evidence this build produced it. Refuse anything older than the source
+# it is supposed to contain.
+NEWEST_SRC=$(ls -t "$ROOT/electron"/*.js "$ROOT/electron/app/index.html" 2>/dev/null | head -1)
+if [ -n "$NEWEST_SRC" ] && [ "$NEWEST_SRC" -nt "$ASAR" ]; then
+  echo "STALE: $(basename "$NEWEST_SRC") is newer than the packaged app — this build did not include it"
+  exit 1
+fi
 rm -rf "$OUT"
 # electron-builder ships the library as @electron/asar; call its API directly
 # rather than guessing where a CLI shim lives.
