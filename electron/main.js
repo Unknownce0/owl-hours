@@ -2,6 +2,7 @@ const { app, BrowserWindow, shell, Menu, ipcMain } = require('electron');
 const path = require('path');
 const d2l = require('./d2l');
 const aleks = require('./aleks');
+const gradescope = require('./gradescope');
 
 let mainWindow = null;
 const REFRESH_EVERY = 6 * 60 * 60 * 1000;   // re-check D2L every six hours
@@ -77,6 +78,27 @@ ipcMain.handle('owl:signout', () => d2l.signOut());
 /* ALEKS is manual on purpose: it allows one session per account, so a
    background pull would sign the user out of ALEKS mid-homework. */
 /* Safe to call any time: it looks at D2L only and never opens ALEKS. */
+/* Gradescope has no session limit, so unlike ALEKS this can run unattended. */
+ipcMain.handle('owl:gradescope', async (_e, interactive) => {
+  const res = await gradescope.pull(!!interactive, (text) => send('owl:status', text));
+  if (!res.ok) return res;
+  const courses = res.courses.map((c) => ({
+    code: c.code,
+    name: c.name,
+    items: c.items.map((i) => ({
+      t: 'a',
+      n: i.n + '  (Gradescope)',
+      d: i.d || undefined,
+      o: i.o || undefined,
+      s: /no submission/i.test(i.status) ? 'Not Submitted' : (i.status || 'Submitted'),
+      u: i.u ? 'https://www.gradescope.com' + i.u : 'https://www.gradescope.com' + c.href,
+      x: 1,
+      src: 'gs'
+    }))
+  }));
+  return { ok: true, courses };
+});
+
 ipcMain.handle('owl:alekscheck', (_e, courseIds) => aleks.findCourses(courseIds || []));
 
 ipcMain.handle('owl:aleks', async (_e, courseIds) => {
@@ -95,7 +117,8 @@ ipcMain.handle('owl:aleks', async (_e, courseIds) => {
         s: done ? 'Completed' : 'Not Submitted',
         e: i.pct != null ? i.pct : undefined,
         p: i.pct != null ? 100 : undefined,
-        x: 1
+        x: 1,
+        src: 'aleks'
       };
     })
   }));

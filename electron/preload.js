@@ -9,5 +9,6 @@ contextBridge.exposeInMainWorld('owl', {
   onStatus: (cb) => ipcRenderer.on('owl:status', (_e, text) => cb(text)),
   onNeedLogin: (cb) => ipcRenderer.on('owl:needlogin', () => cb()),
   pullAleks: (courseIds) => ipcRenderer.invoke('owl:aleks', courseIds),
-  checkAleks: (courseIds) => ipcRenderer.invoke('owl:alekscheck', courseIds)
+  checkAleks: (courseIds) => ipcRenderer.invoke('owl:alekscheck', courseIds),
+  pullGradescope: (interactive) => ipcRenderer.invoke('owl:gradescope', interactive)
 });

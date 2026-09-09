@@ -120,6 +120,23 @@ above the topic link rather than on the link itself. Walk up from the anchor, bu
 walk (4 levels) and ignore any container over ~320 characters — otherwise a topic with no
 date swallows the whole table and picks up a neighbour's.
 
+## Gradescope
+
+Some classes post their real work in Gradescope and leave D2L nearly empty — CSE 1321L
+had four placeholder items in D2L and every actual lab in Gradescope.
+
+- Courses come from `/account`; each course page's assignment table is read directly.
+- The markup is unusually good: rows carry `.table--primaryLink`, `[class*=submissionStatus]`
+  and real `<time datetime="2026-09-20 23:59:00 -0400">` values, so there is no date
+  parsing guesswork of the kind D2L needs.
+- Gradescope courses are matched to D2L classes on letters-and-digits of the course code,
+  so `CSE1321L/B03 and CSE1321L/04` lands on `CSE 1321L` without colliding with `CSE 1321`.
+- **Unlike ALEKS there is no one-session rule**, so this runs on the ordinary refresh
+  rather than only when asked. It fails silently when signed out — not everyone has a
+  Gradescope class, so a banner would be noise.
+- Items are tagged `src:'gs'`; each source only ever replaces its own items, so an ALEKS
+  pull cannot delete Gradescope work and vice versa.
+
 ## ALEKS
 
 Classes that run their work in ALEKS (Precalculus, Chemistry) look empty in D2L, because

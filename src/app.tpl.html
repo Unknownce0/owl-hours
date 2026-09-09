@@ -271,7 +271,7 @@ var TERM_END   = new Date(2027,0,15).getTime();
 
 var K = {data:"owlhours.data.v1", done:"owlhours.done.v1", todos:"owlhours.todos.v1",
          whatif:"owlhours.whatif.v1", ui:"owlhours.ui.v1", sync:"owlhours.sync.v1",
-         upd:"owlhours.update.v1", aleks:"owlhours.aleks.v1"};
+         upd:"owlhours.update.v1", aleks:"owlhours.aleks.v1", gs:"owlhours.gradescope.v1"};
 
 function load(k,f){ try{ var s=localStorage.getItem(k); return s?JSON.parse(s):f; }catch(e){ return f; } }
 function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
@@ -845,6 +845,19 @@ function renderSync(){
   h += '</div></div>';
 
   if(DESKTOP){
+    var gsAge = (function(){
+      var st = load(K.gs,{});
+      if(!st.lastPull) return "Not pulled yet.";
+      var days = Math.floor((Date.now()-st.lastPull)/86400000);
+      return days < 1 ? "Last read today." : "Last read "+days+" day"+(days===1?"":"s")+" ago.";
+    })();
+    h += '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Classes that use Gradescope</h3></div><div class="card-b">';
+    h += '<p class="sub" style="padding-top:0">Some classes post their real work in Gradescope and leave D2L nearly empty. '+
+         'Gradescope has no one-session rule, so this refreshes automatically along with D2L &mdash; you only need the button for a first sign-in.</p>';
+    h += '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="g-pull">Pull my Gradescope work</button></div>';
+    h += '<p class="vstamp" style="margin-top:9px">'+esc(gsAge)+'</p>';
+    h += '<p class="sub" id="g-msg"></p></div></div>';
+
     h += '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Classes that use ALEKS</h3></div><div class="card-b">';
     h += '<p class="sub" style="padding-top:0">D2L can&rsquo;t see ALEKS, so a class that runs its work there &mdash; Precalculus, Chemistry &mdash; looks empty. '+
          'This reads your ALEKS assignments and folds them in, and they survive every later D2L refresh.</p>';
@@ -901,6 +914,15 @@ function renderSync(){
   document.getElementById("v-sync").innerHTML = h;
 
   if(DESKTOP){
+    var gm = document.getElementById("g-msg");
+    var gsay = function(s){ if(gm) gm.textContent = s; };
+    document.getElementById("g-pull").onclick = function(){
+      var b = this; b.disabled = true; b.textContent = "Reading Gradescope\u2026";
+      gsay("Opening Gradescope\u2026");
+      pullGradescope(true, gsay, function(ok){
+        if(!ok){ b.disabled = false; b.textContent = "Pull my Gradescope work"; }
+      });
+    };
     var am = document.getElementById("a-msg");
     var asay = function(s){ if(am) am.textContent = s; };
     window.owl.onStatus(asay);
@@ -1049,7 +1071,8 @@ function pullAleksNow(note, done){
     res.courses.forEach(function(rc){
       var course = next.courses.filter(function(c){ return c.id === rc.ou; })[0];
       if(!course) return;
-      course.items = (course.items||[]).filter(function(i){ return !i.x; });
+      /* drop only the previous ALEKS pull — Gradescope items live here too */
+      course.items = (course.items||[]).filter(function(i){ return i.src !== "aleks"; });
       rc.items.forEach(function(i){ course.items.push(i); added++; });
     });
     save(K.data, next);
@@ -1059,6 +1082,48 @@ function pullAleksNow(note, done){
     setTimeout(function(){ location.reload(); }, 700);
   }, function(e){
     if(note) note("Couldn\u2019t read ALEKS: "+e);
+    if(done) done(false);
+  });
+}
+
+/* Gradescope names a course like "CSE1321L/B03"; the D2L code is "CSE 1321L".
+   Compare on letters and digits alone so section suffixes don't defeat it. */
+function courseKey(s){
+  var m = String(s||"").toUpperCase().match(/[A-Z]{2,5}\s?\d{3,4}[A-Z]?/);
+  return m ? m[0].replace(/[^A-Z0-9]/g,"") : "";
+}
+
+function pullGradescope(interactive, note, done){
+  if(!DESKTOP) return;
+  window.owl.pullGradescope(!!interactive).then(function(res){
+    if(!res || !res.ok){
+      if(note) note(res && res.needLogin ? "Sign in to Gradescope to pull your work."
+                                         : "Couldn\u2019t read Gradescope: "+((res&&res.error)||"unknown problem"));
+      if(done) done(false, res && res.needLogin);
+      return;
+    }
+    var next = JSON.parse(JSON.stringify(DATA));
+    var added = 0, unmatched = [];
+    res.courses.forEach(function(gc){
+      var key = courseKey(gc.code) || courseKey(gc.name);
+      var course = next.courses.filter(function(c){ return courseKey(c.code) === key; })[0];
+      if(!course){ unmatched.push(gc.code || gc.name); return; }
+      course.items = (course.items||[]).filter(function(i){ return i.src !== "gs"; });
+      gc.items.forEach(function(i){ course.items.push(i); added++; });
+    });
+    if(!added){
+      if(note) note(unmatched.length ? "Gradescope has "+esc(unmatched.join(", "))+", which doesn\u2019t match any D2L class."
+                                     : "Nothing new from Gradescope.");
+      if(done) done(false);
+      return;
+    }
+    save(K.data, next);
+    var st = load(K.gs,{}); st.lastPull = Date.now(); save(K.gs, st);
+    if(note) note("Loaded "+added+" Gradescope item"+(added===1?"":"s")+". Reloading\u2026");
+    if(done) done(true);
+    setTimeout(function(){ location.reload(); }, 700);
+  }, function(e){
+    if(note) note("Couldn\u2019t read Gradescope: "+e);
     if(done) done(false);
   });
 }
@@ -1113,6 +1178,10 @@ function showSignInBar(note){
 if(DESKTOP){
   window.owl.onData(function(j){ applyData(j, null); });
   window.owl.onNeedLogin(function(){ showSignInBar(); });
+  /* Gradescope costs nothing to check, so keep it current without asking.
+     Silent on failure: a missing Gradescope sign-in is not worth a banner
+     when the user may not even have a class that uses it. */
+  setTimeout(function(){ pullGradescope(false, null, null); }, 6000);
 }
 
 /* ---------- pulling data from a URL ---------- */
