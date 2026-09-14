@@ -14,5 +14,7 @@ contextBridge.exposeInMainWorld('owl', {
   /* Degree planning. The audit needs the Kennesaw sign-in; the maps are public. */
   pullDegree: (interactive) => ipcRenderer.invoke('owl:degree', interactive),
   listPrograms: () => ipcRenderer.invoke('owl:programs'),
-  readProgram: (id) => ipcRenderer.invoke('owl:program', id)
+  readProgram: (id) => ipcRenderer.invoke('owl:program', id),
+  prereqs: (codes, index) => ipcRenderer.invoke('owl:prereqs', { codes, index }),
+  forecast: () => ipcRenderer.invoke('owl:forecast')
 });

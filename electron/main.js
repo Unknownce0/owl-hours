@@ -5,6 +5,8 @@ const aleks = require('./aleks');
 const gradescope = require('./gradescope');
 const degreeworks = require('./degreeworks');
 const academicmap = require('./academicmap');
+const catalog = require('./catalog');
+const forecast = require('./forecast');
 
 let mainWindow = null;
 const REFRESH_EVERY = 6 * 60 * 60 * 1000;   // re-check D2L every six hours
@@ -110,6 +112,14 @@ ipcMain.handle('owl:degree', (_e, interactive) =>
 ipcMain.handle('owl:programs', () => academicmap.listPrograms());
 ipcMain.handle('owl:program', (_e, id) =>
   academicmap.readProgram(id, (text) => send('owl:status', text)));
+
+/* Stage 2 of the degree planner: what you are cleared to take, and whether it
+   is expected to run. Both sources are public, so neither ever prompts. */
+ipcMain.handle('owl:prereqs', (_e, payload) => {
+  const p = payload || {};
+  return catalog.prereqs(p.codes || [], p.index || null, (text) => send('owl:status', text));
+});
+ipcMain.handle('owl:forecast', () => forecast.pull((text) => send('owl:status', text)));
 
 ipcMain.handle('owl:alekscheck', (_e, courseIds) => aleks.findCourses(courseIds || []));
 

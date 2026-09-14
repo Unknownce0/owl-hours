@@ -879,6 +879,133 @@ function auditIndex(audit){
   return ix;
 }
 
+/* ---------- next-term planning ----------
+   Eligibility is a boolean expression, not a checklist: CS 3305 wants
+   "(MATH 2345 or CSE 2300) and ((CSE 1322 and CSE 1322L) or ...)". catalog.js
+   parses that into a tree; this walks it. */
+function prereqMet(node, have){
+  if(!node) return true;                       // no prerequisite at all
+  if(node.course) return !!have[courseKey(node.course)];
+  if(node.op === "and") return (node.kids||[]).every(function(k){ return prereqMet(k, have); });
+  if(node.op === "or")  return (node.kids||[]).some(function(k){ return prereqMet(k, have); });
+  return true;
+}
+
+/* KSU term codes are YYYYMM with 01 Spring, 05 Summer, 08 Fall; the forecast
+   tables key off FA26 / SP27 / SU27 instead, so translate between them. */
+function nextTermKey(t){
+  t = String(t || "");
+  if(!/^\d{6}$/.test(t)) return null;
+  var yr = +t.slice(0,4), mm = t.slice(4);
+  if(mm === "08") return "SP" + String(yr+1).slice(2);
+  if(mm === "01") return "SU" + String(yr).slice(2);
+  return "FA" + String(yr).slice(2);
+}
+
+function planNextTerm(done){
+  var st = degState();
+  if(!st.audit || !st.map){ if(done) done(false, "Set up your degree map first."); return; }
+
+  var codes = [];
+  (st.map.terms||[]).forEach(function(t){
+    (t.rows||[]).forEach(function(r){ if(r.code && codes.indexOf(r.code) < 0) codes.push(r.code); });
+  });
+
+  window.owl.prereqs(codes, st.catalogIndex || null).then(function(pr){
+    if(!pr || !pr.ok){ if(done) done(false, "Couldn’t read the catalog: " + ((pr && pr.error) || "unknown problem")); return; }
+    st = degState();
+    st.prereqs = pr.courses;
+    st.catalogIndex = pr.index;          // ~3200 courses; cached so the crawl runs once
+    save(K.deg, st);
+    window.owl.forecast().then(function(fc){
+      var s2 = degState();
+      if(fc && fc.ok) s2.forecast = fc.forecast;
+      s2.plannedAt = new Date().toISOString();
+      save(K.deg, s2);
+      if(done) done(true, "");
+    });
+  });
+}
+
+function renderPlan(){
+  var st = degState();
+  if(!st.prereqs){
+    return '<div class="card"><div class="card-h"><strong>What can I take next?</strong></div><div class="card-b">'
+      + '<p style="margin-top:0">Check every course on your map against its catalog prerequisites and against which courses KSU expects to run.</p>'
+      + '<button class="btn" id="deg-plan">Work out my next term</button> <span id="deg-plannote" class="stat"></span>'
+      + '<p class="stat" style="margin:10px 0 0">Reads the catalog once (about 3,200 courses), then remembers it.</p>'
+      + '</div></div>';
+  }
+
+  var a = st.audit, m = st.map, ix = auditIndex(a);
+  var passed = {}, afterTerm = {};
+  (a.classes||[]).forEach(function(c){
+    var k = courseKey(c.code); if(!k) return;
+    if(c.passed && !c.inProgress) passed[k] = 1;
+    afterTerm[k] = 1;                                  // assumes this term's work passes
+  });
+
+  var nextKey = nextTermKey(a.activeTerm);
+  var fc = st.forecast && st.forecast.courses;
+
+  var ready = [], soon = [], blocked = [];
+  (m.terms||[]).forEach(function(t){
+    (t.rows||[]).forEach(function(r){
+      if(!r.code) return;
+      var k = courseKey(r.code);
+      if(ix[k]) return;                                // already taken or taking
+      var p = st.prereqs[r.code];
+      if(!p || p.missing) return;
+      var row = { code: r.code, name: r.name, term: t.term, text: p.prereqText || "",
+                  offered: fc && fc[r.code] ? fc[r.code][nextKey] : undefined };
+      if(prereqMet(p.prereq, passed)) ready.push(row);
+      else if(prereqMet(p.prereq, afterTerm)) soon.push(row);
+      else blocked.push(row);
+    });
+  });
+
+  function list(rows, cls){
+    if(!rows.length) return '<p class="stat" style="margin:0">Nothing here.</p>';
+    return rows.map(function(r){
+      var off = "";
+      if(r.offered === undefined) off = '<span class="degtick">not forecast</span>';
+      else if(r.offered === null)  off = '<span class="degtick" style="color:var(--red)">not offered</span>';
+      else off = '<span class="degtick">' + esc(r.offered) + '</span>';
+      return '<div class="degrow ' + cls + '">'
+           + '<span class="degcode">' + esc(r.code) + '</span>'
+           + '<span class="degname">' + esc(r.name) + (r.text ? ' <span style="color:var(--faint)">— needs ' + esc(r.text) + '</span>' : '') + '</span>'
+           + off + '</div>';
+    }).join("");
+  }
+
+  var h = '<div class="card"><div class="card-h"><strong>What can I take next?</strong>'
+        + (nextKey ? ' <span class="pill">' + esc(nextKey) + '</span>' : '') + '</div><div class="card-b">';
+  h += '<h3 style="font-family:var(--display);font-size:14px;margin:0 0 6px;color:var(--green)">Ready now <span class="pill">' + ready.length + '</span></h3>' + list(ready, "deg-done");
+  h += '<h3 style="font-family:var(--display);font-size:14px;margin:16px 0 6px;color:var(--gold-ink)">Once this term’s courses pass <span class="pill">' + soon.length + '</span></h3>' + list(soon, "deg-now");
+  h += '<h3 style="font-family:var(--display);font-size:14px;margin:16px 0 6px;color:var(--muted)">Still blocked <span class="pill">' + blocked.length + '</span></h3>' + list(blocked, "deg-open");
+  h += '<p class="stat" style="margin:14px 0 0">Forecasts are KSU’s tentative plan and can change · <a href="#" id="deg-replan">check again</a></p>';
+  h += '</div></div>';
+  return h;
+}
+
+function wirePlan(){
+  var b = document.getElementById("deg-plan");
+  if(b) b.onclick = function(){
+    var me = this; me.disabled = true; me.textContent = "Working…";
+    planNextTerm(function(ok, msg){
+      me.disabled = false; me.textContent = "Work out my next term";
+      var n = document.getElementById("deg-plannote");
+      if(n) n.innerHTML = esc(msg || "");
+      if(ok) renderDegree();
+    });
+  };
+  var r = document.getElementById("deg-replan");
+  if(r) r.onclick = function(e){
+    e.preventDefault(); this.textContent = "checking…";
+    planNextTerm(function(){ renderDegree(); });
+  };
+}
+
 function renderDegree(){
   var el = document.getElementById("v-degree");
   var st = degState();
@@ -925,6 +1052,8 @@ function renderDegree(){
      + '</div><div class="degbar"><span style="width:' + pct + '%"></span></div>'
      + '</div></div>';
 
+  h += renderPlan();
+
   /* four years, two terms each */
   var byYear = {};
   (m.terms || []).forEach(function(t){ (byYear[t.year] = byYear[t.year] || []).push(t); });
@@ -957,18 +1086,23 @@ function renderDegree(){
 
   /* Courses on your record that the map has no slot for. Transfer credit and
      gen-ed choices land here, so an empty-looking map term is not the whole story. */
+  /* In-progress work counts here too. Three of six current courses sit in
+     gen-ed slots the map only names as placeholders ("Arts and Humanities"),
+     so filtering these out hid them from the page completely. */
   var extra = (a.classes || []).filter(function(c){
     var k = courseKey(c.code);
-    return k && !used[k] && c.passed && !c.inProgress;
+    return k && !used[k] && (c.inProgress || c.passed);
   });
   if(extra.length){
     h += '<div class="degyear"><h3>Also on your record <span class="pill">' + extra.length + '</span></h3>'
        + '<div class="card"><div class="card-b">'
-       + '<p class="stat" style="margin:0 0 9px">Passed, but not slotted into a term above — usually transfer credit or a gen-ed choice.</p>';
+       + '<p class="stat" style="margin:0 0 9px">Not slotted into a term above — transfer credit, or a course filling a gen-ed slot the map only names generically.</p>';
     extra.forEach(function(c){
-      h += '<div class="degrow deg-done"><span class="degcode">' + esc(c.code) + '</span>'
+      var cls  = c.inProgress ? "deg-now" : "deg-done";
+      var tick = c.inProgress ? "now" : (c.transfer ? "transfer" : (c.grade || "done"));
+      h += '<div class="degrow ' + cls + '"><span class="degcode">' + esc(c.code) + '</span>'
          + '<span class="degname">' + esc(c.title) + '</span>'
-         + '<span class="degtick">' + esc(c.transfer ? "transfer" : (c.grade || "done")) + '</span></div>';
+         + '<span class="degtick">' + esc(tick) + '</span></div>';
     });
     h += '</div></div></div>';
   }
@@ -989,6 +1123,8 @@ function renderDegree(){
      + ' · <a href="#" id="deg-again">refresh</a> · <a href="#" id="deg-switch">change program</a></p>';
 
   el.innerHTML = h;
+
+  wirePlan();
 
   document.getElementById("deg-again").onclick = function(e){
     e.preventDefault();

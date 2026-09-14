@@ -53,7 +53,10 @@ const READ_AUDIT = `(async function(){
       grade: grade,
       inProgress: c.inProgress === 'Y' || grade === 'REGD',
       passed: c.passed === 'Y',
-      transfer: !!(c.transfer && c.transfer.trim() && c.transfer.trim() !== 'N'),
+      /* Genuine transfer credit is transfer "T" / transferCode "TR". A plain
+         KSU course record carries "C", which is not a transfer — testing for
+         "anything but N" marked every course on the record as transferred. */
+      transfer: String(c.transfer || '').trim() === 'T',
       term: c.term || '',
       termName: c.termLiteral || ''
     };

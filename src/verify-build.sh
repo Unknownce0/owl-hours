@@ -43,6 +43,8 @@ check aleks.js
 check gradescope.js
 check degreeworks.js
 check academicmap.js
+check catalog.js
+check forecast.js
 check grabber-return.js
 check app/index.html
 check build/icon.png
@@ -53,6 +55,8 @@ contains d2l.js "bounced to single sign-on"
 contains app/index.html "Refresh from D2L"
 contains degreeworks.js "api/students/myself"
 contains academicmap.js "academic-maps"
+contains catalog.js "preview_course"
+contains forecast.js "course-forecasts"
 
 echo "privacy:"
 if grep -q "DEFAULT_DATA = null" "$OUT/app/index.html" 2>/dev/null; then
