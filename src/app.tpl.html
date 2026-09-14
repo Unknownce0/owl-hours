@@ -879,111 +879,272 @@ function auditIndex(audit){
   return ix;
 }
 
-/* ---------- next-term planning ----------
-   Eligibility is a boolean expression, not a checklist: CS 3305 wants
-   "(MATH 2345 or CSE 2300) and ((CSE 1322 and CSE 1322L) or ...)". catalog.js
-   parses that into a tree; this walks it. */
+/* ---------- building a plan from where you actually are ----------
+
+   The published map assumes eight terms starting from zero. Someone arriving
+   with a year of dual-enrolment credit is nowhere near that, so rendering the
+   map as "your four years" is fiction. This works forward from the audit
+   instead: what is genuinely left, in an order the prerequisites allow, in
+   terms the course is actually forecast to run, at a believable credit load.
+*/
+
 function prereqMet(node, have){
-  if(!node) return true;                       // no prerequisite at all
+  if(!node) return true;
   if(node.course) return !!have[courseKey(node.course)];
   if(node.op === "and") return (node.kids||[]).every(function(k){ return prereqMet(k, have); });
   if(node.op === "or")  return (node.kids||[]).some(function(k){ return prereqMet(k, have); });
   return true;
 }
 
-/* KSU term codes are YYYYMM with 01 Spring, 05 Summer, 08 Fall; the forecast
-   tables key off FA26 / SP27 / SU27 instead, so translate between them. */
-function nextTermKey(t){
-  t = String(t || "");
-  if(!/^\d{6}$/.test(t)) return null;
-  var yr = +t.slice(0,4), mm = t.slice(4);
-  if(mm === "08") return "SP" + String(yr+1).slice(2);
-  if(mm === "01") return "SU" + String(yr).slice(2);
-  return "FA" + String(yr).slice(2);
+/* Which courses are actually missing. For an "or" the cheapest branch wins,
+   so "MATH 1190 or (MATH 1179 and MATH 1189)" reports one course, not three. */
+function missingFor(node, have){
+  if(!node) return [];
+  if(node.course) return have[courseKey(node.course)] ? [] : [node.course];
+  if(node.op === "and"){
+    var out = [];
+    (node.kids||[]).forEach(function(k){ out = out.concat(missingFor(k, have)); });
+    return out;
+  }
+  if(node.op === "or"){
+    var best = null;
+    (node.kids||[]).forEach(function(k){
+      var mm = missingFor(k, have);
+      if(best === null || mm.length < best.length) best = mm;
+    });
+    return best || [];
+  }
+  return [];
 }
 
-function planNextTerm(done){
-  var st = degState();
-  if(!st.audit || !st.map){ if(done) done(false, "Set up your degree map first."); return; }
+function termLabel(k){
+  var m = String(k||"").match(/^(FA|SP|SU)(\d{2})$/);
+  if(!m) return k || "";
+  return ({FA:"Fall", SP:"Spring", SU:"Summer"})[m[1]] + " 20" + m[2];
+}
 
-  var codes = [];
-  (st.map.terms||[]).forEach(function(t){
-    (t.rows||[]).forEach(function(r){ if(r.code && codes.indexOf(r.code) < 0) codes.push(r.code); });
-  });
+/* KSU term codes are YYYYMM (01 Spring, 05 Summer, 08 Fall); forecasts key off
+   FA26 / SP27. Summer is opt-in — most people don't assume it. */
+function termsAfter(activeTerm, n, includeSummer){
+  var t = String(activeTerm || "");
+  if(!/^\d{6}$/.test(t)) return [];
+  var cur = { yr: +t.slice(0,4), s: (t.slice(4) === "01" ? "SP" : t.slice(4) === "05" ? "SU" : "FA") };
+  function step(c){
+    if(c.s === "SP") return includeSummer ? {yr:c.yr, s:"SU"} : {yr:c.yr, s:"FA"};
+    if(c.s === "SU") return {yr:c.yr, s:"FA"};
+    return {yr:c.yr+1, s:"SP"};
+  }
+  var out = [], c = cur;
+  for(var i=0;i<n;i++){ c = step(c); out.push(c.s + String(c.yr).slice(2)); }
+  return out;
+}
 
-  window.owl.prereqs(codes, st.catalogIndex || null).then(function(pr){
-    if(!pr || !pr.ok){ if(done) done(false, "Couldn’t read the catalog: " + ((pr && pr.error) || "unknown problem")); return; }
-    st = degState();
-    st.prereqs = pr.courses;
-    st.catalogIndex = pr.index;          // ~3200 courses; cached so the crawl runs once
-    save(K.deg, st);
-    window.owl.forecast().then(function(fc){
-      var s2 = degState();
-      if(fc && fc.ok) s2.forecast = fc.forecast;
-      s2.plannedAt = new Date().toISOString();
-      save(K.deg, s2);
-      if(done) done(true, "");
+/* The map names gen-ed slots generically ("General Education Core IMPACTS-
+   Arts and Humanities"); the audit reports them as requirement blocks ("Arts,
+   Humanities, & Ethics"). IMPACTS is a fixed, small set, so these are matched
+   explicitly rather than by word-overlap guessing — and order matters, since
+   "Technology, Mathematics and Sciences" would otherwise be caught by the
+   plain "Mathematics" rule. */
+var AREA_MAP = [
+  [/institutional priority/i,      /institutional priority/i],
+  [/technology,?\s*mathematics/i,  /technology.*sciences/i],
+  [/political science/i,           /political science/i],
+  [/arts and humanities/i,         /arts.*humanities/i],
+  [/social sciences/i,             /social sciences/i],
+  [/communication|writing/i,       /communication in writing/i],
+  [/mathematics/i,                 /mathematics.*quantitative/i]
+];
+function slotBlock(text, blocks){
+  for(var i=0;i<AREA_MAP.length;i++){
+    if(AREA_MAP[i][0].test(text)){
+      var b = (blocks||[]).filter(function(x){ return AREA_MAP[i][1].test(x.title); })[0];
+      if(b) return b;
+    }
+  }
+  return null;
+}
+
+/* 17, not 16. Prerequisite chains can leave a term only part-full (early on
+   there simply is not much you are eligible for yet), and a four-hour science
+   slot then will not fit the three-hour gap — which pushed a four-credit
+   semester onto the end of the plan. One credit of headroom absorbs that, and
+   17 hours is an ordinary full-time load rather than an overload. */
+var LOAD_CAP = 17;   // credits per term
+
+function buildPlan(){
+  var st = degState(), a = st.audit, m = st.map;
+  var ix = auditIndex(a), blocks = a.blocks || [];
+
+  /* Everything on the record counts as available for prerequisite purposes —
+     including this term's work, which will have finished before any planned
+     term begins. */
+  var avail = {};
+  (a.classes||[]).forEach(function(c){ var k = courseKey(c.code); if(k) avail[k] = 1; });
+
+  var courses = [], slots = [];
+  (m.terms||[]).forEach(function(t){
+    (t.rows||[]).forEach(function(r){
+      if(r.code){
+        if(ix[courseKey(r.code)]) return;                 // done or in progress
+        courses.push({ kind:"course", code:r.code, name:r.name, hours:r.hours || 3 });
+      } else {
+        var b = slotBlock(r.name, blocks);
+        if(b && b.pct >= 100) return;                     // that area is finished
+        slots.push({ kind:"slot", name:r.name, hours:r.hours || 3, block:b });
+      }
     });
   });
+
+  /* Close the prerequisite chain. Calculus I is required by three courses on
+     this map but is never named on it — it fills a generic "Applied Math"
+     slot. Left implicit, everything downstream becomes unschedulable and the
+     plan silently cannot finish. Anything genuinely required gets added. */
+  var added = [];
+  for(var guard=0; guard<12; guard++){
+    var known = {};
+    Object.keys(avail).forEach(function(k){ known[k] = 1; });
+    courses.forEach(function(x){ known[courseKey(x.code)] = 1; });
+    var need = [];
+    courses.forEach(function(x){
+      var p = st.prereqs && st.prereqs[x.code];
+      if(!p || p.missing) return;
+      missingFor(p.prereq, known).forEach(function(c){
+        if(!known[courseKey(c)] && need.indexOf(c) < 0) need.push(c);
+      });
+    });
+    if(!need.length) break;
+    need.forEach(function(c){
+      var t = (st.catalogTitles && st.catalogTitles[c]) || "required before a later course";
+      var item = { kind:"course", code:c, name:t, hours:3, added:true };
+      courses.push(item); added.push(c);
+    });
+  }
+
+  /* Reconcile against the audit rather than the map. The map totals a whole
+     degree from a standing start; DegreeWorks knows how much of that transfer
+     credit already covered, so the credits still owed come from there. Any
+     generic slots beyond that budget were already satisfied and are dropped. */
+  var applied = (blocks[0] && blocks[0].credits) || 0;
+  var inProg  = (a.classes||[]).filter(function(c){ return c.inProgress; })
+                               .reduce(function(n,c){ return n + (c.credits || 0); }, 0);
+  var budget  = Math.max(0, (m.totalHours || 120) - applied - inProg);
+  var namedHours = courses.reduce(function(n,x){ return n + x.hours; }, 0);
+
+  /* More slots appear on the map than the budget allows, because transfer
+     credit already covered some. Keep the ones furthest from finished rather
+     than simply the ones printed earliest, so a half-met area outranks one the
+     audit already calls complete. */
+  var slotRoom = budget - namedHours, keptSlots = [];
+  slots.map(function(sl, i){ return { sl:sl, i:i, pct: sl.block ? sl.block.pct : 0 }; })
+       .sort(function(x,y){ return x.pct - y.pct || x.i - y.i; })
+       .forEach(function(e){
+         if(e.sl.hours <= slotRoom){ keptSlots.push(e); slotRoom -= e.sl.hours; }
+       });
+  keptSlots = keptSlots.sort(function(x,y){ return x.i - y.i; }).map(function(e){ return e.sl; });
+
+  var pool = courses.concat(keptSlots);
+  var totalLeft = pool.reduce(function(n,x){ return n + x.hours; }, 0);
+  var terms = termsAfter(a.activeTerm, 12, false);
+  var fc = st.forecast && st.forecast.courses;
+  var plan = [];
+
+  for(var ti=0; ti<terms.length && pool.length; ti++){
+    var key = terms[ti], picks = [], cr = 0;
+    /* Fill each term largest-first, courses ahead of generic slots. Taking
+       items in map order left three-hour gaps that a four-hour science slot
+       could never fit, which pushed a nearly-empty extra semester onto the end.
+       Courses go first regardless of size because they unlock later terms;
+       slots unlock nothing. */
+    var order = pool.map(function(x, i){ return { x:x, i:i }; }).sort(function(p, q){
+      var pc = p.x.kind === "course" ? 0 : 1, qc = q.x.kind === "course" ? 0 : 1;
+      return pc - qc || q.x.hours - p.x.hours || p.i - q.i;
+    });
+    for(var i=0;i<order.length;i++){
+      var it = order[i].x;
+      if(cr + it.hours > LOAD_CAP) continue;
+      if(it.kind === "course"){
+        var p = st.prereqs && st.prereqs[it.code];
+        /* Prerequisites are checked against what is available *before* this
+           term, never against what we just placed in it — you cannot take a
+           course and its prerequisite in the same semester. */
+        if(p && !p.missing && !prereqMet(p.prereq, avail)) continue;
+        if(fc && fc[it.code] && fc[it.code][key] === null) continue;   // not offered
+      }
+      picks.push(it); cr += it.hours;
+    }
+    if(!picks.length) break;                              // nothing else can be placed
+    picks.forEach(function(x){
+      if(x.kind === "course") avail[courseKey(x.code)] = 1;
+      pool.splice(pool.indexOf(x), 1);
+    });
+    plan.push({ key:key, picks:picks, credits:cr });
+  }
+
+  return { plan:plan, stuck:pool, totalLeft:totalLeft, added:added, budget:budget, applied:applied, inProg:inProg };
 }
 
 function renderPlan(){
   var st = degState();
   if(!st.prereqs){
-    return '<div class="card"><div class="card-h"><strong>What can I take next?</strong></div><div class="card-b">'
-      + '<p style="margin-top:0">Check every course on your map against its catalog prerequisites and against which courses KSU expects to run.</p>'
-      + '<button class="btn" id="deg-plan">Work out my next term</button> <span id="deg-plannote" class="stat"></span>'
+    return '<div class="card"><div class="card-h"><strong>Your plan from here</strong></div><div class="card-b">'
+      + '<p style="margin-top:0">Work out what is genuinely left after your transfer credit, and lay it into real semesters '
+      + 'that respect prerequisites and what KSU expects to actually run.</p>'
+      + '<button class="btn" id="deg-plan">Build my plan</button> <span id="deg-plannote" class="stat"></span>'
       + '<p class="stat" style="margin:10px 0 0">Reads the catalog once (about 3,200 courses), then remembers it.</p>'
       + '</div></div>';
   }
 
-  var a = st.audit, m = st.map, ix = auditIndex(a);
-  var passed = {}, afterTerm = {};
-  (a.classes||[]).forEach(function(c){
-    var k = courseKey(c.code); if(!k) return;
-    if(c.passed && !c.inProgress) passed[k] = 1;
-    afterTerm[k] = 1;                                  // assumes this term's work passes
-  });
+  var r = buildPlan();
+  var a = st.audit;
+  var last = r.plan.length ? r.plan[r.plan.length-1].key : null;
 
-  var nextKey = nextTermKey(a.activeTerm);
-  var fc = st.forecast && st.forecast.courses;
+  var h = '<div class="card"><div class="card-h"><strong>Your plan from here</strong>'
+        + '<span class="pill">' + r.plan.length + ' more term' + (r.plan.length===1?'':'s') + '</span></div><div class="card-b">';
 
-  var ready = [], soon = [], blocked = [];
-  (m.terms||[]).forEach(function(t){
-    (t.rows||[]).forEach(function(r){
-      if(!r.code) return;
-      var k = courseKey(r.code);
-      if(ix[k]) return;                                // already taken or taking
-      var p = st.prereqs[r.code];
-      if(!p || p.missing) return;
-      var row = { code: r.code, name: r.name, term: t.term, text: p.prereqText || "",
-                  offered: fc && fc[r.code] ? fc[r.code][nextKey] : undefined };
-      if(prereqMet(p.prereq, passed)) ready.push(row);
-      else if(prereqMet(p.prereq, afterTerm)) soon.push(row);
-      else blocked.push(row);
+  h += '<div class="degstats" style="margin-bottom:12px">'
+     + '<span class="stat">' + r.totalLeft + ' credits left</span>'
+     + (last ? '<span class="stat">finishes ' + esc(termLabel(last)) + '</span>' : '')
+     + (a.transferCredits ? '<span class="stat">' + a.transferCredits + ' already transferred in</span>' : '')
+     + '</div>';
+
+  if(!r.plan.length){
+    h += '<p class="stat">Nothing could be scheduled — check that the plan has your prerequisites loaded.</p>';
+  }
+
+  r.plan.forEach(function(t){
+    h += '<h3 style="font-family:var(--display);font-size:14px;margin:16px 0 6px">'
+       + esc(termLabel(t.key)) + ' <span class="pill">' + t.credits + ' hrs</span></h3>';
+    t.picks.forEach(function(x){
+      var fcRow = st.forecast && st.forecast.courses && x.code ? st.forecast.courses[x.code] : null;
+      var mode = fcRow ? fcRow[t.key] : null;
+      h += '<div class="degrow ' + (x.kind === "course" ? "deg-now" : "deg-open") + '">'
+         + '<span class="degcode">' + esc(x.code || "—") + '</span>'
+         + '<span class="degname">' + esc(x.name)
+         + (x.kind === "slot" && x.block ? ' <span style="color:var(--faint)">— ' + esc(x.block.title) + ' ' + Math.round(x.block.pct) + '%</span>' : '')
+         + '</span>'
+         + '<span class="degtick">' + esc(mode || (x.hours + " hr")) + '</span></div>';
     });
   });
 
-  function list(rows, cls){
-    if(!rows.length) return '<p class="stat" style="margin:0">Nothing here.</p>';
-    return rows.map(function(r){
-      var off = "";
-      if(r.offered === undefined) off = '<span class="degtick">not forecast</span>';
-      else if(r.offered === null)  off = '<span class="degtick" style="color:var(--red)">not offered</span>';
-      else off = '<span class="degtick">' + esc(r.offered) + '</span>';
-      return '<div class="degrow ' + cls + '">'
-           + '<span class="degcode">' + esc(r.code) + '</span>'
-           + '<span class="degname">' + esc(r.name) + (r.text ? ' <span style="color:var(--faint)">— needs ' + esc(r.text) + '</span>' : '') + '</span>'
-           + off + '</div>';
-    }).join("");
+  if(r.stuck.length){
+    h += '<h3 style="font-family:var(--display);font-size:14px;margin:18px 0 6px;color:var(--red)">Couldn’t place these</h3>'
+       + '<p class="stat" style="margin:0 0 8px">A prerequisite chain or the forecast blocks them inside this window — worth an advisor conversation.</p>';
+    r.stuck.forEach(function(x){
+      h += '<div class="degrow deg-open"><span class="degcode">' + esc(x.code || "—") + '</span>'
+         + '<span class="degname">' + esc(x.name) + '</span>'
+         + '<span class="degtick">' + x.hours + ' hr</span></div>';
+    });
   }
 
-  var h = '<div class="card"><div class="card-h"><strong>What can I take next?</strong>'
-        + (nextKey ? ' <span class="pill">' + esc(nextKey) + '</span>' : '') + '</div><div class="card-b">';
-  h += '<h3 style="font-family:var(--display);font-size:14px;margin:0 0 6px;color:var(--green)">Ready now <span class="pill">' + ready.length + '</span></h3>' + list(ready, "deg-done");
-  h += '<h3 style="font-family:var(--display);font-size:14px;margin:16px 0 6px;color:var(--gold-ink)">Once this term’s courses pass <span class="pill">' + soon.length + '</span></h3>' + list(soon, "deg-now");
-  h += '<h3 style="font-family:var(--display);font-size:14px;margin:16px 0 6px;color:var(--muted)">Still blocked <span class="pill">' + blocked.length + '</span></h3>' + list(blocked, "deg-open");
-  h += '<p class="stat" style="margin:14px 0 0">Forecasts are KSU’s tentative plan and can change · <a href="#" id="deg-replan">check again</a></p>';
+  var tail = r.plan.length ? r.plan[r.plan.length-1] : null;
+  if(tail && tail.credits <= 6 && r.plan.length > 1){
+    h += '<p class="stat" style="margin:14px 0 0;color:var(--gold-ink)">'
+       + esc(termLabel(tail.key)) + ' only carries ' + tail.credits + ' hours. One summer class, or one extra course in an '
+       + 'earlier term, would finish you a whole semester sooner.</p>';
+  }
+
+  h += '<p class="stat" style="margin:16px 0 0">Assumes up to ' + LOAD_CAP + ' credits a term and no summers. '
+     + 'Forecasts are KSU’s tentative plan · <a href="#" id="deg-replan">rebuild</a></p>';
   h += '</div></div>';
   return h;
 }
@@ -993,17 +1154,66 @@ function wirePlan(){
   if(b) b.onclick = function(){
     var me = this; me.disabled = true; me.textContent = "Working…";
     planNextTerm(function(ok, msg){
-      me.disabled = false; me.textContent = "Work out my next term";
+      me.disabled = false; me.textContent = "Build my plan";
       var n = document.getElementById("deg-plannote");
       if(n) n.innerHTML = esc(msg || "");
       if(ok) renderDegree();
     });
   };
-  var r = document.getElementById("deg-replan");
-  if(r) r.onclick = function(e){
-    e.preventDefault(); this.textContent = "checking…";
+  var rp = document.getElementById("deg-replan");
+  if(rp) rp.onclick = function(e){
+    e.preventDefault(); this.textContent = "rebuilding…";
     planNextTerm(function(){ renderDegree(); });
   };
+}
+
+function planNextTerm(done){
+  var st = degState();
+  if(!st.audit || !st.map){ if(done) done(false, "Set up your degree map first."); return; }
+  var codes = [];
+  (st.map.terms||[]).forEach(function(t){
+    (t.rows||[]).forEach(function(r){ if(r.code && codes.indexOf(r.code) < 0) codes.push(r.code); });
+  });
+
+  window.owl.prereqs(codes, st.catalogIndex || null).then(function(pr){
+    if(!pr || !pr.ok){ if(done) done(false, "Couldn\u2019t read the catalog: " + ((pr && pr.error) || "unknown problem")); return; }
+
+    /* Second pass. The first only asked about courses named on the map, but a
+       prerequisite can point at one that is not — Calculus I is required by
+       three courses here and appears on the map only as a generic slot.
+       Without its own rules the planner would treat it as having none and
+       could order the chain wrongly, so anything referenced is looked up too. */
+    var refs = [];
+    Object.keys(pr.courses).forEach(function(code){
+      var c = pr.courses[code];
+      [c.prereq, c.concurrent].forEach(function walk(n){
+        if(!n) return;
+        if(n.course){ if(!pr.courses[n.course] && refs.indexOf(n.course) < 0) refs.push(n.course); return; }
+        (n.kids||[]).forEach(walk);
+      });
+    });
+
+    var finish = function(all, index){
+      var s1 = degState();
+      s1.prereqs = all; s1.catalogIndex = index;
+      if(pr.titles) s1.catalogTitles = pr.titles;
+      save(K.deg, s1);
+      window.owl.forecast().then(function(fc){
+        var s2 = degState();
+        if(fc && fc.ok) s2.forecast = fc.forecast;
+        s2.plannedAt = new Date().toISOString();
+        save(K.deg, s2);
+        if(done) done(true, "");
+      });
+    };
+
+    if(!refs.length) return finish(pr.courses, pr.index);
+    window.owl.prereqs(refs, pr.index).then(function(pr2){
+      var all = pr.courses;
+      if(pr2 && pr2.ok) Object.keys(pr2.courses).forEach(function(k){ all[k] = pr2.courses[k]; });
+      finish(all, pr.index);
+    });
+  });
 }
 
 function renderDegree(){
@@ -1054,7 +1264,13 @@ function renderDegree(){
 
   h += renderPlan();
 
-  /* four years, two terms each */
+  /* KSU's published map, kept as a reference below the real plan. It assumes
+     a standing start, so for anyone arriving with transfer credit it is not
+     their schedule — it is the shape of the degree. Labelled as such. */
+  h += '<h2 style="font-family:var(--display);font-size:17px;margin:26px 0 4px">KSU\u2019s standard map</h2>'
+     + '<p class="stat" style="margin:0 0 10px">The degree as published, assuming you started from zero. '
+     + 'Shown for reference \u2014 your actual plan is above.</p>';
+
   var byYear = {};
   (m.terms || []).forEach(function(t){ (byYear[t.year] = byYear[t.year] || []).push(t); });
 

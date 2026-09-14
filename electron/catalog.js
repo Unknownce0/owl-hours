@@ -161,16 +161,20 @@ function parsePrereq(raw) {
 
 const INDEX_JS = `(async function(){
   var base = '/content.php?catoid=${CATOID}&navoid=9372&filter%5Bitem_type%5D=3&filter%5Bonly_active%5D=1&filter%5B3%5D=1&filter%5Bcpage%5D=';
-  var idx = {}, pages = [];
+  var idx = {}, titles = {}, pages = [];
   for (var p = 1; p <= ${LIST_PAGES}; p++) pages.push(p);
   for (var i = 0; i < pages.length; i += 8) {
     await Promise.all(pages.slice(i, i + 8).map(async function(p){
       var h = await (await fetch(base + p, {credentials:'include'})).text();
-      var re = /coid=(\\d+)[^>]*>\\s*([A-Z]{2,5})\\s*(\\d{3,4}[A-Z]?)\\s*:/g, m;
-      while ((m = re.exec(h))) idx[m[2] + ' ' + m[3]] = m[1];
+      var re = /coid=(\\d+)[^>]*>\\s*([A-Z]{2,5})\\s*(\\d{3,4}[A-Z]?)\\s*:\\s*([^<]{0,90})</g, m;
+      while ((m = re.exec(h))) {
+        var code = m[2] + ' ' + m[3];
+        idx[code] = m[1];
+        titles[code] = (m[4] || '').replace(/\\s+/g, ' ').trim();
+      }
     }));
   }
-  return JSON.stringify(idx);
+  return JSON.stringify({ idx: idx, titles: titles });
 })()`;
 
 function coursesJS(coids) {
@@ -221,11 +225,15 @@ async function prereqs(codes, cachedIndex, say = () => {}) {
   try {
     await load(win, HOST + '/content.php?catoid=' + CATOID + '&navoid=9372');
 
-    let index = cachedIndex;
+    let index = cachedIndex, titles = {};
     if (!index || !Object.keys(index).length) {
       say('Reading the course catalog…');
       const raw = await win.webContents.executeJavaScript(INDEX_JS, true);
-      try { index = JSON.parse(raw); } catch (e) { index = null; }
+      try {
+        const parsed = JSON.parse(raw);
+        index = parsed.idx || parsed;          // older caches stored the bare map
+        titles = parsed.titles || {};
+      } catch (e) { index = null; }
       if (!index || !Object.keys(index).length) { close(); return { ok: false, error: 'could not read the catalog index' }; }
     }
 
@@ -246,7 +254,7 @@ async function prereqs(codes, cachedIndex, say = () => {}) {
     // say "not in the catalog" rather than silently implying no prerequisites.
     codes.forEach((c) => { if (!(c in courses)) courses[c] = { missing: true }; });
 
-    return { ok: true, index, courses, scrapedAt: new Date().toISOString() };
+    return { ok: true, index, titles, courses, scrapedAt: new Date().toISOString() };
   } catch (e) {
     close();
     return { ok: false, error: String((e && e.message) || e) };
