@@ -3,6 +3,8 @@ const path = require('path');
 const d2l = require('./d2l');
 const aleks = require('./aleks');
 const gradescope = require('./gradescope');
+const degreeworks = require('./degreeworks');
+const academicmap = require('./academicmap');
 
 let mainWindow = null;
 const REFRESH_EVERY = 6 * 60 * 60 * 1000;   // re-check D2L every six hours
@@ -98,6 +100,16 @@ ipcMain.handle('owl:gradescope', async (_e, interactive) => {
   }));
   return { ok: true, courses };
 });
+
+/* DegreeWorks rides the same Kennesaw sign-in as D2L, so once one of them is
+   signed in the other usually needs no interaction at all. */
+ipcMain.handle('owl:degree', (_e, interactive) =>
+  degreeworks.pull(!!interactive, (text) => send('owl:status', text)));
+
+/* The academic maps are public, so these two never prompt for anything. */
+ipcMain.handle('owl:programs', () => academicmap.listPrograms());
+ipcMain.handle('owl:program', (_e, id) =>
+  academicmap.readProgram(id, (text) => send('owl:status', text)));
 
 ipcMain.handle('owl:alekscheck', (_e, courseIds) => aleks.findCourses(courseIds || []));
 

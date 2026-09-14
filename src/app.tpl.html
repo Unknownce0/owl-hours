@@ -146,6 +146,29 @@ a{color:var(--gold-ink)}
 .cal-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
 .cal-top h2{font-size:19px;font-weight:600;min-width:180px}
 .grid-scroll{overflow-x:auto}
+/* ---- degree map ---- */
+.degbar{height:7px;border-radius:20px;background:var(--panel-3);overflow:hidden;margin-top:9px}
+.degbar>span{display:block;height:100%;background:var(--green);border-radius:20px}
+.degstats{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:2px}
+.degyear{margin-top:20px}
+.degyear>h3{font-family:var(--display);font-size:15px;margin:0 0 9px;display:flex;align-items:center;gap:9px}
+.degterms{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}
+.degrow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line)}
+.degrow:last-child{border-bottom:0}
+.degcode{font-family:var(--mono);font-size:11.5px;white-space:nowrap}
+.degname{font-size:13px;color:var(--muted)}
+.deghrs{font-family:var(--mono);font-size:11px;color:var(--faint)}
+.deg-done .degcode{color:var(--green);font-weight:600}
+.deg-done .degname{color:var(--ink);text-decoration:line-through;text-decoration-color:var(--line)}
+.deg-now .degcode{color:var(--gold-ink);font-weight:600}
+.deg-now .degname{color:var(--ink)}
+.deg-open .degcode{color:var(--faint)}
+.degtick{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.deg-done .degtick{color:var(--green)}
+.deg-now .degtick{color:var(--gold-ink)}
+.deg-open .degtick{color:var(--faint)}
+.degblock{display:grid;grid-template-columns:1fr auto;gap:4px 14px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.degblock:last-child{border-bottom:0}
 .cal{display:grid;grid-template-columns:repeat(7,minmax(112px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .cal .dow{background:var(--panel-2);padding:7px 9px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);text-align:center}
 .day{background:var(--panel);min-height:104px;padding:6px 7px;display:flex;flex-direction:column;gap:3px;cursor:pointer;border:0;text-align:left;font:inherit;color:inherit}
@@ -237,6 +260,7 @@ details.br kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel);
       <button class="tab" role="tab" data-view="calendar" aria-selected="false">Calendar</button>
       <button class="tab" role="tab" data-view="classes" aria-selected="false">Classes</button>
       <button class="tab" role="tab" data-view="grades" aria-selected="false">Grades</button>
+      <button class="tab" role="tab" data-view="degree" aria-selected="false">Degree</button>
     </div>
     <button class="icon-btn" id="btn-refresh" style="display:none">Refresh</button>
     <button class="icon-btn" data-view="sync">Sync D2L</button>
@@ -250,6 +274,7 @@ details.br kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel);
   <div id="v-calendar" class="hidden"></div>
   <div id="v-classes" class="hidden"></div>
   <div id="v-grades" class="hidden"></div>
+  <div id="v-degree" class="hidden"></div>
   <div id="v-sync" class="hidden"></div>
 </div>
 
@@ -271,7 +296,8 @@ var TERM_END   = new Date(2027,0,15).getTime();
 
 var K = {data:"owlhours.data.v1", done:"owlhours.done.v1", todos:"owlhours.todos.v1",
          whatif:"owlhours.whatif.v1", ui:"owlhours.ui.v1", sync:"owlhours.sync.v1",
-         upd:"owlhours.update.v1", aleks:"owlhours.aleks.v1", gs:"owlhours.gradescope.v1"};
+         upd:"owlhours.update.v1", aleks:"owlhours.aleks.v1", gs:"owlhours.gradescope.v1",
+         deg:"owlhours.degree.v1"};
 
 function load(k,f){ try{ var s=localStorage.getItem(k); return s?JSON.parse(s):f; }catch(e){ return f; } }
 function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
@@ -830,6 +856,232 @@ var SCRAPER = "javascript:(function(){var M={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5
 "W.onclick=function(e){if(e.target===W&&W.parentNode)W.parentNode.removeChild(W)};"+
 "R.appendChild(CP);R.appendChild(CL);B.appendChild(H);B.appendChild(M);B.appendChild(TA);B.appendChild(R);W.appendChild(B);document.body.appendChild(W);sel();"+
 "})}).catch(function(e){alert('Owl Hours: '+e)})})})();";
+/* end SCRAPER */
+
+/* ---------- degree map ----------
+   Two sources, joined on the course code: the published academic map (what the
+   degree asks for, term by term) and the DegreeWorks audit (what you have
+   actually done). Neither alone answers "how far along am I" — the map has no
+   idea who you are, and the audit has no sense of what a normal term looks like. */
+
+function degState(){ return load(K.deg, {}); }
+
+/* Audit rows keyed the same way Gradescope matching works, so "CSE 1321L" and
+   "CSE1321L" land on each other. */
+function auditIndex(audit){
+  var ix = {};
+  (audit && audit.classes || []).forEach(function(c){
+    var k = courseKey(c.code);
+    if(!k) return;
+    /* A retake shows twice; a pass outranks anything else. */
+    if(!ix[k] || (c.passed && !ix[k].passed)) ix[k] = c;
+  });
+  return ix;
+}
+
+function renderDegree(){
+  var el = document.getElementById("v-degree");
+  var st = degState();
+
+  if(!DESKTOP && !st.audit){
+    el.innerHTML = '<div class="card"><div class="card-b"><p>The degree map reads DegreeWorks, which needs the desktop app to sign in. '
+      + 'Open Owl Hours on your Mac or PC and it will sync across.</p></div></div>';
+    return;
+  }
+
+  if(!st.audit || !st.map){
+    el.innerHTML = '<div class="card"><div class="card-h"><strong>Your degree, year by year</strong></div>'
+      + '<div class="card-b"><p style="margin-top:0">Pull your DegreeWorks audit and Owl Hours will lay your whole degree out '
+      + 'across four years, with everything you have already passed ticked off.</p>'
+      + '<p class="stat" style="margin:10px 0 14px">Your name, student ID and phone numbers are not stored — only courses, credits and grades.</p>'
+      + '<button class="btn" id="deg-setup">Set up my degree map</button> '
+      + '<span id="deg-note" class="stat"></span></div></div>';
+    document.getElementById("deg-setup").onclick = function(){
+      var b = this; b.disabled = true; b.textContent = "Working…";
+      setupDegree(function(ok, msg){
+        b.disabled = false; b.textContent = "Set up my degree map";
+        var n = document.getElementById("deg-note");
+        if(n) n.innerHTML = esc(msg || "");
+        if(ok) renderDegree();
+      });
+    };
+    return;
+  }
+
+  var a = st.audit, m = st.map, ix = auditIndex(a);
+  var used = {};
+  var h = "";
+
+  /* header */
+  var pct = Math.max(0, Math.min(100, a.percentComplete || 0));
+  h += '<div class="card"><div class="card-h"><strong>' + esc(m.title || a.program || "Your degree") + '</strong>'
+     + (a.catalogYear ? ' <span class="pill">Catalog ' + esc(a.catalogYear) + '</span>' : '')
+     + '</div><div class="card-b">'
+     + '<div class="degstats">'
+     +   '<span class="stat">' + pct.toFixed(0) + '% complete</span>'
+     +   '<span class="stat">' + (a.blocks && a.blocks[0] ? a.blocks[0].credits : 0) + ' of ' + (m.totalHours || 120) + ' credits</span>'
+     +   (a.transferCredits ? '<span class="stat">' + a.transferCredits + ' transferred</span>' : '')
+     +   (a.gpa && a.gpa !== "0.00" ? '<span class="stat">GPA ' + esc(a.gpa) + '</span>' : '')
+     + '</div><div class="degbar"><span style="width:' + pct + '%"></span></div>'
+     + '</div></div>';
+
+  /* four years, two terms each */
+  var byYear = {};
+  (m.terms || []).forEach(function(t){ (byYear[t.year] = byYear[t.year] || []).push(t); });
+
+  Object.keys(byYear).sort(function(x,y){ return x-y; }).forEach(function(y){
+    var terms = byYear[y];
+    var hrs = 0;
+    terms.forEach(function(t){ t.rows.forEach(function(r){ hrs += r.hours || 0; }); });
+
+    h += '<div class="degyear"><h3>Year ' + esc(y) + ' <span class="pill">' + hrs + ' hours</span></h3><div class="degterms">';
+    terms.forEach(function(t){
+      h += '<div class="card"><div class="card-h"><strong>Term ' + t.term + '</strong></div><div class="card-b">';
+      t.rows.forEach(function(r){
+        var k = r.code ? courseKey(r.code) : "";
+        var c = k ? ix[k] : null;
+        if(c) used[k] = 1;
+        var cls = "deg-open", tick = "";
+        if(c && c.inProgress){ cls = "deg-now";  tick = "now"; }
+        else if(c && c.passed){ cls = "deg-done"; tick = c.transfer ? "transfer" : (c.grade || "done"); }
+        h += '<div class="degrow ' + cls + '">'
+           +   '<span class="degcode">' + esc(r.code || "—") + '</span>'
+           +   '<span class="degname">' + esc(r.name || "") + '</span>'
+           +   '<span class="degtick">' + esc(tick || (r.hours ? r.hours + " hr" : "")) + '</span>'
+           + '</div>';
+      });
+      h += '</div></div>';
+    });
+    h += '</div></div>';
+  });
+
+  /* Courses on your record that the map has no slot for. Transfer credit and
+     gen-ed choices land here, so an empty-looking map term is not the whole story. */
+  var extra = (a.classes || []).filter(function(c){
+    var k = courseKey(c.code);
+    return k && !used[k] && c.passed && !c.inProgress;
+  });
+  if(extra.length){
+    h += '<div class="degyear"><h3>Also on your record <span class="pill">' + extra.length + '</span></h3>'
+       + '<div class="card"><div class="card-b">'
+       + '<p class="stat" style="margin:0 0 9px">Passed, but not slotted into a term above — usually transfer credit or a gen-ed choice.</p>';
+    extra.forEach(function(c){
+      h += '<div class="degrow deg-done"><span class="degcode">' + esc(c.code) + '</span>'
+         + '<span class="degname">' + esc(c.title) + '</span>'
+         + '<span class="degtick">' + esc(c.transfer ? "transfer" : (c.grade || "done")) + '</span></div>';
+    });
+    h += '</div></div></div>';
+  }
+
+  /* requirement blocks straight from the audit */
+  if(a.blocks && a.blocks.length){
+    h += '<div class="degyear"><h3>Requirement areas</h3><div class="card"><div class="card-b">';
+    a.blocks.forEach(function(b){
+      var p = Math.max(0, Math.min(100, b.pct || 0));
+      h += '<div class="degblock"><span>' + esc(b.title) + '</span>'
+         + '<span class="degtick">' + p.toFixed(0) + '%</span>'
+         + '<div class="degbar" style="grid-column:1/-1"><span style="width:' + p + '%"></span></div></div>';
+    });
+    h += '</div></div></div>';
+  }
+
+  h += '<p class="stat" style="margin:18px 0 0">Audit read ' + esc(fmtWhen(a.scrapedAt))
+     + ' · <a href="#" id="deg-again">refresh</a> · <a href="#" id="deg-switch">change program</a></p>';
+
+  el.innerHTML = h;
+
+  document.getElementById("deg-again").onclick = function(e){
+    e.preventDefault();
+    var n = this; n.textContent = "refreshing…";
+    setupDegree(function(ok){ renderDegree(); }, st.programId);
+  };
+  document.getElementById("deg-switch").onclick = function(e){ e.preventDefault(); chooseProgram(); };
+}
+
+function fmtWhen(iso){
+  var t = Date.parse(iso || "");
+  if(!t) return "just now";
+  var d = new Date(t);
+  return d.toLocaleDateString(undefined,{month:"short",day:"numeric"}) + " " +
+         d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+}
+
+/* Pull the audit, then the matching published map. The audit names the program
+   ("Computer Science"), so the map usually picks itself and nobody has to hunt
+   through a list of 120. */
+function setupDegree(done, forceProgramId){
+  if(!DESKTOP){ if(done) done(false, "The desktop app is needed for this."); return; }
+  window.owl.pullDegree(true).then(function(res){
+    if(!res || !res.ok){
+      if(done) done(false, res && res.needLogin ? "Sign in to KSU to read your audit."
+                                                : "Couldn’t read DegreeWorks: " + ((res && res.error) || "unknown problem"));
+      return;
+    }
+    var st = degState();
+    st.audit = res.audit;
+    save(K.deg, st);
+
+    var want = forceProgramId || st.programId;
+    if(want) return loadProgram(want, st, done);
+
+    window.owl.listPrograms().then(function(pr){
+      if(!pr || !pr.ok){ save(K.deg, st); if(done) done(true, "Got your audit, but the program list didn’t load."); return; }
+      st.programs = pr.programs;
+      var target = String(res.audit.program || "").toLowerCase();
+      var hit = pr.programs.filter(function(p){ return p.name.toLowerCase() === target; })[0]
+             || pr.programs.filter(function(p){ return p.name.toLowerCase().indexOf(target) >= 0 && target; })[0];
+      save(K.deg, st);
+      if(!hit){ if(done) done(true, "Got your audit — now pick your program."); chooseProgram(); return; }
+      loadProgram(hit.id, st, done);
+    });
+  });
+}
+
+function loadProgram(id, st, done){
+  window.owl.readProgram(id).then(function(mr){
+    if(!mr || !mr.ok){ if(done) done(false, "Couldn’t load the program map: " + ((mr && mr.error) || "unknown problem")); return; }
+    st.map = mr.map; st.programId = id;
+    save(K.deg, st);
+    if(done) done(true, "");
+  });
+}
+
+/* The app is shared with friends in other majors, so the program is always
+   changeable, not locked to whatever the audit happened to say. */
+function chooseProgram(){
+  var st = degState();
+  var el = document.getElementById("v-degree");
+  var render = function(list){
+    var h = '<div class="card"><div class="card-h"><strong>Pick your program</strong></div><div class="card-b">'
+          + '<input id="deg-find" placeholder="Search majors…" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit">'
+          + '<div id="deg-list" style="max-height:340px;overflow:auto;margin-top:10px"></div></div></div>';
+    el.innerHTML = h;
+    var draw = function(q){
+      var box = document.getElementById("deg-list");
+      var ql = (q||"").toLowerCase();
+      box.innerHTML = list.filter(function(p){ return !ql || p.name.toLowerCase().indexOf(ql) >= 0; })
+        .slice(0,200)
+        .map(function(p){ return '<div class="degrow"><span class="degname" style="grid-column:1/3">' + esc(p.name) + '</span>'
+                               + '<button class="btn" data-prog="' + esc(p.id) + '" style="padding:4px 10px;font-size:12px">Use</button></div>'; })
+        .join("") || '<p class="stat">No match.</p>';
+    };
+    draw("");
+    document.getElementById("deg-find").oninput = function(){ draw(this.value); };
+    el.onclick = function(e){
+      var b = e.target.closest ? e.target.closest("[data-prog]") : null;
+      if(!b) return;
+      b.textContent = "…";
+      loadProgram(b.getAttribute("data-prog"), degState(), function(){ el.onclick = null; renderDegree(); });
+    };
+  };
+  if(st.programs && st.programs.length) return render(st.programs);
+  el.innerHTML = '<div class="card"><div class="card-b"><p class="stat">Loading programs…</p></div></div>';
+  window.owl.listPrograms().then(function(pr){
+    if(!pr || !pr.ok){ el.innerHTML = '<div class="card"><div class="card-b"><p>Couldn’t load the program list.</p></div></div>'; return; }
+    var s2 = degState(); s2.programs = pr.programs; save(K.deg, s2);
+    render(pr.programs);
+  });
+}
 
 function renderSync(){
   var when = DATA.scrapedAt ? new Date(DATA.scrapedAt) : null;
@@ -1326,7 +1578,7 @@ function watchForNewBuild(){
 if(DESKTOP && !PERSONAL) checkForUpdate(); else if(!DESKTOP) watchForNewBuild();
 
 /* ---------- shell ---------- */
-var VIEWS = ["agenda","calendar","classes","grades","sync"];
+var VIEWS = ["agenda","calendar","classes","grades","degree","sync"];
 function show(v){
   ui.view = v; save(K.ui,ui);
   VIEWS.forEach(function(n){
@@ -1339,6 +1591,7 @@ function show(v){
   if(v==="calendar") renderCalendar();
   if(v==="classes") renderClasses();
   if(v==="grades") renderGrades();
+  if(v==="degree") renderDegree();
   if(v==="sync") renderSync();
   window.scrollTo(0,0);
 }

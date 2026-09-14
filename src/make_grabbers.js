@@ -6,7 +6,10 @@
 const fs = require('fs');
 
 const src = fs.readFileSync('index.html', 'utf8');
-const m = src.match(/var SCRAPER = ([\s\S]*?);\n\nfunction renderSync/);
+/* Ends on an explicit sentinel, not on whatever function happens to follow.
+   It used to anchor on "function renderSync", so adding any code between the
+   two silently broke grabber generation. */
+const m = src.match(/var SCRAPER = ([\s\S]*?);\n\/\* end SCRAPER \*\//);
 if (!m) { console.error('SCRAPER not found in index.html'); process.exit(1); }
 
 const bookmarklet = eval(m[1]);
