@@ -7,6 +7,7 @@ const degreeworks = require('./degreeworks');
 const academicmap = require('./academicmap');
 const catalog = require('./catalog');
 const forecast = require('./forecast');
+const calendar = require('./calendar');
 
 let mainWindow = null;
 const REFRESH_EVERY = 6 * 60 * 60 * 1000;   // re-check D2L every six hours
@@ -120,6 +121,47 @@ ipcMain.handle('owl:prereqs', (_e, payload) => {
   return catalog.prereqs(p.codes || [], p.index || null, (text) => send('owl:status', text));
 });
 ipcMain.handle('owl:forecast', () => forecast.pull((text) => send('owl:status', text)));
+
+/* The calendar carries the things that are never submitted anywhere — most
+   importantly sit-down exams. Shaped like every other row so the agenda and
+   calendar views need no special case, and flagged x:1 so a D2L refresh keeps
+   it, the same way ALEKS and Gradescope rows survive. */
+ipcMain.handle('owl:calendar', async (_e, orgUnits) => {
+  const res = await calendar.pull(orgUnits || [], (text) => send('owl:status', text));
+  if (!res.ok) return res;
+  /* Courses bulk-stamp their content modules onto the calendar: DANC 1107 has
+     fourteen "Week N - <topic>" entries all sharing one timestamp near the end
+     of term. Those are availability markers, not deadlines, and adding them
+     would drop fourteen rows onto a single December day. A timestamp shared by
+     five or more events in one course is that pattern, never five real
+     deadlines that happen to coincide. */
+  const stamp = {};
+  res.events.forEach((ev) => {
+    const k = ev.ou + '|' + ev.start + '|' + ev.end;
+    stamp[k] = (stamp[k] || 0) + 1;
+  });
+  const bulk = (ev) => stamp[ev.ou + '|' + ev.start + '|' + ev.end] >= 5;
+
+  const items = res.events.filter((ev) => !bulk(ev)).map((ev) => {
+    const timed = calendar.isScheduled(ev);
+    const isExam = /\b(exam|midterm|final|test)\b/i.test(ev.n);
+    return {
+      ou: ev.ou,
+      t: isExam ? 'q' : 'a',
+      /* For something you sit at a fixed hour, the moment that matters is when
+         it starts, not when it ends. For a deadline the end is the deadline. */
+      d: timed ? ev.start : (ev.end || ev.start),
+      n: ev.n + (timed ? '  (scheduled)' : ''),
+      s: 'Not Submitted',
+      where: ev.where || undefined,
+      timed: timed ? 1 : undefined,
+      exam: isExam ? 1 : undefined,
+      x: 1,
+      src: 'cal'
+    };
+  });
+  return { ok: true, items };
+});
 
 ipcMain.handle('owl:alekscheck', (_e, courseIds) => aleks.findCourses(courseIds || []));
 

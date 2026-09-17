@@ -67,9 +67,13 @@ echo "    site will redeploy in a minute or two"
 
 if [ -n "$VERSION" ]; then
   echo "==> publishing downloads as $VERSION"
+  # Match this version only. Globbing all of dist/ attached every previous
+  # build to the new release, so the download page listed six installers and
+  # no obvious right one.
   FILES=()
-  for f in dist/*.dmg dist/*.exe; do [ -e "$f" ] && FILES+=("$f"); done
-  [ ${#FILES[@]} -gt 0 ] || { echo "no installers in dist/"; exit 1; }
+  for f in dist/*"$NUM"*.dmg dist/*.exe; do [ -e "$f" ] && FILES+=("$f"); done
+  [ ${#FILES[@]} -gt 0 ] || { echo "no installers for $NUM in dist/"; exit 1; }
+  echo "    attaching: ${FILES[*]##*/}"
 
   if gh release view "$VERSION" >/dev/null 2>&1; then
     gh release upload "$VERSION" "${FILES[@]}" --clobber

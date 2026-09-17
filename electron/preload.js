@@ -16,5 +16,6 @@ contextBridge.exposeInMainWorld('owl', {
   listPrograms: () => ipcRenderer.invoke('owl:programs'),
   readProgram: (id) => ipcRenderer.invoke('owl:program', id),
   prereqs: (codes, index) => ipcRenderer.invoke('owl:prereqs', { codes, index }),
-  forecast: () => ipcRenderer.invoke('owl:forecast')
+  forecast: () => ipcRenderer.invoke('owl:forecast'),
+  pullCalendar: (orgUnits) => ipcRenderer.invoke('owl:calendar', orgUnits)
 });

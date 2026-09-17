@@ -1697,6 +1697,67 @@ function courseKey(s){
   return m ? m[0].replace(/[^A-Z0-9]/g,"") : "";
 }
 
+/* Calendar events, merged in without doubling anything.
+
+   Most of what the calendar holds is already on the page: a quiz normally
+   appears there twice (it opens, then it closes) as well as in the quiz list.
+   So an event is only added when nothing of that name already exists in the
+   course. What survives that filter is the genuinely invisible work — a
+   sit-down exam has no dropbox and no quiz object, so the calendar is the only
+   place in D2L it exists at all. */
+function calKey(n){
+  return String(n||"").toLowerCase()
+    .replace(/\(scheduled\)|\(gradescope\)|\(aleks\)/g,"")
+    .replace(/[^a-z0-9]+/g," ").trim();
+}
+
+function pullCalendar(note, done){
+  if(!DESKTOP){ if(done) done(false); return; }
+  var ous = (DATA.courses||[]).map(function(c){ return c.id; }).filter(Boolean);
+  if(!ous.length){ if(done) done(false); return; }
+
+  window.owl.pullCalendar(ous).then(function(res){
+    if(!res || !res.ok){
+      if(note) note(res && res.needLogin ? "Sign in to D2L to read your calendar."
+                                         : "Couldn’t read the calendar: "+((res&&res.error)||"unknown problem"));
+      if(done) done(false, res && res.needLogin);
+      return;
+    }
+    var next = JSON.parse(JSON.stringify(DATA));
+    var added = 0, exams = 0;
+
+    next.courses.forEach(function(c){
+      var mine = res.items.filter(function(i){ return i.ou === c.id; });
+      if(!mine.length) return;
+
+      /* Compare against what the course already has, ignoring rows this same
+         merge added last time so a re-run replaces rather than accumulates. */
+      c.items = (c.items||[]).filter(function(i){ return i.src !== "cal"; });
+      var have = {};
+      (c.items||[]).forEach(function(i){ have[calKey(i.n)] = 1; });
+
+      var seen = {};
+      mine.forEach(function(i){
+        var k = calKey(i.n);
+        if(have[k] || seen[k]) return;      // already known, or a duplicate within the calendar itself
+        seen[k] = 1;
+        var row = JSON.parse(JSON.stringify(i));
+        delete row.ou;
+        c.items.push(row);
+        added++;
+        if(row.exam) exams++;
+      });
+    });
+
+    if(!added){ if(note) note("Nothing new in the calendar."); if(done) done(false); return; }
+    save(K.data, next);
+    if(note) note("Added "+added+" calendar item"+(added===1?"":"s")
+                  +(exams?" including "+exams+" exam"+(exams===1?"":"s"):"")+". Reloading…");
+    if(done) done(true);
+    setTimeout(function(){ location.reload(); }, 700);
+  }, function(){ if(done) done(false); });
+}
+
 function pullGradescope(interactive, note, done){
   if(!DESKTOP) return;
   window.owl.pullGradescope(!!interactive).then(function(res){
@@ -1786,6 +1847,17 @@ if(DESKTOP){
      Silent on failure: a missing Gradescope sign-in is not worth a banner
      when the user may not even have a class that uses it. */
   setTimeout(function(){ pullGradescope(false, null, null); }, 6000);
+    /* Exams live only here, so this runs unattended like Gradescope — but it
+       must not fail silently the way that one does. A lapsed sign-in meant the
+       calendar pull returned "needs login", nobody was told, and an exam four
+       days out simply never appeared. Worth one banner. */
+    setTimeout(function(){
+      pullCalendar(null, function(ok, needLogin){
+        if(!ok && needLogin){
+          showSignInBar("Your exams live only in the D2L calendar, and Owl Hours can\u2019t read it until you sign in.");
+        }
+      });
+    }, 9000);
 }
 
 /* ---------- pulling data from a URL ---------- */
