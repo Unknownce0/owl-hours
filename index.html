@@ -305,7 +305,7 @@ details.br kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel);
 "use strict";
 
 var DEFAULT_DATA = null;
-var APP_VERSION  = "1.5.0";
+var APP_VERSION  = "1.5.1";
 /* A personal build carries its own coursework. Downloading the public
    release would replace it with an empty one, so never offer that here. */
 var PERSONAL     = /*__PERSONAL__*/false;
@@ -1727,6 +1727,23 @@ function courseKey(s){
    course. What survives that filter is the genuinely invisible work — a
    sit-down exam has no dropbox and no quiz object, so the calendar is the only
    place in D2L it exists at all. */
+/* Re-adding rows that were just stripped is not a change. Both merges below
+   rebuilt their own rows every run, counted that as "added", saved, and
+   reloaded — so the window reloaded every ten seconds forever and no banner
+   ever stayed on screen long enough to read. Compare the result instead. */
+function sameData(a, b){
+  try { return JSON.stringify(a) === JSON.stringify(b); } catch(e){ return false; }
+}
+
+/* A launch-time pull should happen once per app session, not once per reload. */
+function oncePerSession(k){
+  try {
+    if(sessionStorage.getItem(k)) return false;
+    sessionStorage.setItem(k, "1");
+    return true;
+  } catch(e){ return true; }
+}
+
 function calKey(n){
   return String(n||"").toLowerCase()
     .replace(/\(scheduled\)|\(gradescope\)|\(aleks\)/g,"")
@@ -1771,7 +1788,11 @@ function pullCalendar(note, done){
       });
     });
 
-    if(!added){ if(note) note("Nothing new in the calendar."); if(done) done(false); return; }
+    if(!added || sameData(next, DATA)){
+      if(note) note("Nothing new in the calendar.");
+      if(done) done(false);
+      return;
+    }
     save(K.data, next);
     if(note) note("Added "+added+" calendar item"+(added===1?"":"s")
                   +(exams?" including "+exams+" exam"+(exams===1?"":"s"):"")+". Reloading…");
@@ -1801,6 +1822,12 @@ function pullGradescope(interactive, note, done){
     if(!added){
       if(note) note(unmatched.length ? "Gradescope has "+esc(unmatched.join(", "))+", which doesn\u2019t match any D2L class."
                                      : "Nothing new from Gradescope.");
+      if(done) done(false);
+      return;
+    }
+    if(sameData(next, DATA)){
+      var st0 = load(K.gs,{}); st0.lastPull = Date.now(); save(K.gs, st0);
+      if(note) note("Nothing new from Gradescope.");
       if(done) done(false);
       return;
     }
@@ -1868,12 +1895,12 @@ if(DESKTOP){
   /* Gradescope costs nothing to check, so keep it current without asking.
      Silent on failure: a missing Gradescope sign-in is not worth a banner
      when the user may not even have a class that uses it. */
-  setTimeout(function(){ pullGradescope(false, null, null); }, 6000);
+  if(oncePerSession("owlhours.gs.pulled")) setTimeout(function(){ pullGradescope(false, null, null); }, 6000);
     /* Exams live only here, so this runs unattended like Gradescope — but it
        must not fail silently the way that one does. A lapsed sign-in meant the
        calendar pull returned "needs login", nobody was told, and an exam four
        days out simply never appeared. Worth one banner. */
-    setTimeout(function(){
+    if(oncePerSession("owlhours.cal.pulled")) setTimeout(function(){
       pullCalendar(null, function(ok, needLogin){
         if(!ok && needLogin){
           showSignInBar("Your exams live only in the D2L calendar, and Owl Hours can\u2019t read it until you sign in.");

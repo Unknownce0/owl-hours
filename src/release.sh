@@ -71,7 +71,7 @@ if [ -n "$VERSION" ]; then
   # build to the new release, so the download page listed six installers and
   # no obvious right one.
   FILES=()
-  for f in dist/*"$NUM"*.dmg dist/*.exe; do [ -e "$f" ] && FILES+=("$f"); done
+  for f in dist/*"$NUM"*.dmg dist/*"$NUM"*.exe; do [ -e "$f" ] && FILES+=("$f"); done
   [ ${#FILES[@]} -gt 0 ] || { echo "no installers for $NUM in dist/"; exit 1; }
   echo "    attaching: ${FILES[*]##*/}"
 
