@@ -49,8 +49,26 @@ if [ -n "$VERSION" ]; then
     echo "    Windows users stay on the previous release until it is available."
     echo "    To enable it:  softwareupdate --install-rosetta --agree-to-license"
   fi
+  # electron-builder mounts a disk image to build each DMG, and "hdiutil detach"
+  # has now failed three releases because something else still held the volume
+  # (Spotlight indexing it is the usual culprit). Adding the zip targets the
+  # auto-updater needs doubled that work and made it hit most runs. Clear any
+  # leftover volume first, and treat one failure as the flake it is.
+  detach_stale() {
+    for v in /Volumes/"Owl Hours"*; do
+      [ -d "$v" ] && hdiutil detach -force "$v" >/dev/null 2>&1
+    done
+    return 0
+  }
+
   echo "==> building installers (a few minutes)"
-  ( cd electron && npx electron-builder $TARGETS )
+  detach_stale
+  if ! ( cd electron && npx electron-builder $TARGETS ); then
+    echo "!!  build failed — clearing stale disk images and retrying once"
+    detach_stale
+    sleep 5
+    ( cd electron && npx electron-builder $TARGETS )
+  fi
   echo "==> checking the package is complete"
   ./src/verify-build.sh || { echo "build incomplete, nothing published"; exit 1; }
 fi
@@ -70,8 +88,15 @@ if [ -n "$VERSION" ]; then
   # Match this version only. Globbing all of dist/ attached every previous
   # build to the new release, so the download page listed six installers and
   # no obvious right one.
+  # The installers, plus what the auto-updater needs: the macOS .zip Squirrel
+  # updates from, and the latest*.yml feeds electron-builder writes. Without
+  # the yml files the app can see a release but never work out what to fetch.
   FILES=()
-  for f in dist/*"$NUM"*.dmg dist/*"$NUM"*.exe; do [ -e "$f" ] && FILES+=("$f"); done
+  for f in dist/*"$NUM"*.dmg dist/*"$NUM"*.exe dist/*"$NUM"*.zip \
+           dist/latest.yml dist/latest-mac.yml \
+           dist/*"$NUM"*.blockmap; do
+    [ -e "$f" ] && FILES+=("$f")
+  done
   [ ${#FILES[@]} -gt 0 ] || { echo "no installers for $NUM in dist/"; exit 1; }
   echo "    attaching: ${FILES[*]##*/}"
 

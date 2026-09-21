@@ -1989,6 +1989,71 @@ function offerDownload(tag, url){
     });
 }
 
+/* ---------- one-click updates (installed builds) ----------
+   The old banner just linked to GitHub and left you to find the right file.
+   These states come from the main process as it checks, downloads and stages
+   the update, so the whole thing is: press Update, press Restart. */
+function updBar(html, wire){ showUpdateBar('<span class="utext">'+html+'</span>', wire); }
+
+function offerAutoUpdate(version){
+  var upd = load(K.upd,{});
+  if(upd.dismissed === version) return;
+  showUpdateBar('<span class="utext"><b>Version '+esc(version)+' is out.</b> You have '+esc(APP_VERSION)+'.</span>'+
+                '<button class="ubtn" id="u-go">Update now</button>', function(bar){
+    bar.querySelector("#u-go").onclick = function(){
+      this.disabled = true; this.textContent = "Starting…";
+      window.owl.updateDownload().then(function(r){
+        if(r && !r.ok) updBar('<b>Couldn’t download the update.</b> '+esc(r.error||""));
+      });
+    };
+    bar.querySelector(".udismiss").onclick = function(){
+      var u = load(K.upd,{}); u.dismissed = version; save(K.upd,u);
+      bar.classList.add("hidden");
+    };
+  });
+}
+
+function updateProgress(pct){
+  updBar('<b>Downloading update…</b> '+(pct||0)+'%');
+}
+
+function offerRestart(version){
+  showUpdateBar('<span class="utext"><b>Version '+esc(version||"")+' is ready.</b> Restart to finish.</span>'+
+                '<button class="ubtn" id="u-restart">Restart now</button>', function(bar){
+    bar.querySelector("#u-restart").onclick = function(){
+      this.disabled = true; this.textContent = "Restarting…";
+      window.owl.updateInstall();
+    };
+  });
+}
+
+/* Squirrel.Mac checks the signature of the downloaded build against the
+   running one, and these builds are ad-hoc signed. On a Mac that refusal is
+   expected, so say what it means and hand over the disk image rather than
+   showing an error nobody can act on. */
+function updateFailed(u){
+  var url = "https://github.com/" + REPO + "/releases/latest";
+  if(u && u.signature){
+    showUpdateBar('<span class="utext"><b>A new version is out.</b> This Mac build isn’t signed by Apple, '+
+                  'so it can’t replace itself — grab the disk image instead.</span>'+
+                  '<a class="ubtn" href="'+esc(url)+'" target="_blank" rel="noopener">Download</a>');
+    return;
+  }
+  showUpdateBar('<span class="utext"><b>Update failed.</b> '+esc((u&&u.message)||"Unknown problem")+'</span>'+
+                '<a class="ubtn" href="'+esc(url)+'" target="_blank" rel="noopener">Download</a>');
+}
+
+function wireAutoUpdate(){
+  if(!DESKTOP || !window.owl || !window.owl.onUpdate) return;
+  window.owl.onUpdate(function(u){
+    if(!u) return;
+    if(u.state === "available")        offerAutoUpdate(u.version);
+    else if(u.state === "downloading") updateProgress(u.percent);
+    else if(u.state === "ready")       offerRestart(u.version);
+    else if(u.state === "error")       updateFailed(u);
+  });
+}
+
 function checkForUpdate(){
   if(APP_VERSION === "dev") return;
   var upd = load(K.upd,{});
@@ -2026,7 +2091,8 @@ function watchForNewBuild(){
   }).catch(function(){});
 }
 
-if(DESKTOP && !PERSONAL) checkForUpdate(); else if(!DESKTOP) watchForNewBuild();
+if(DESKTOP && !PERSONAL){ wireAutoUpdate(); checkForUpdate(); }
+else if(!DESKTOP) watchForNewBuild();
 
 /* ---------- shell ---------- */
 var VIEWS = ["agenda","calendar","classes","grades","degree","sync"];

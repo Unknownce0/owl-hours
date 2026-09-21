@@ -71,7 +71,17 @@ const CLASS_TILES_READY = "(function(){return [].slice.call(document.querySelect
 /* The menu exists on the class list too, so that alone proves nothing.
    The class is open once the title is no longer "My Classes". */
 const ON_CLASS_HOME = "!/My Classes/i.test(document.title) && /aleks/i.test(document.title)";
-const MENU_OPEN = "!!document.getElementById('smt_hamburgermenu_button_input_assignmentList')";
+/* ALEKS rebuilt this menu: the entries used to be buttons with ids like
+   smt_hamburgermenu_button_input_assignmentList, and are now plain <div>s with
+   no id at all. Matching on the id meant the pull never reached the
+   assignments list. Find the open menu and its "Assignments" entry by text. */
+const MENU_OPEN = "(function(){var c=document.querySelector('.hamburger-menu-items-container');"
+  + "return !!(c && c.offsetParent && /Assignments/.test(c.textContent||''))})()";
+const CLICK_ASSIGNMENTS = "(function(){var c=document.querySelector('.hamburger-menu-items-container');"
+  + "if(!c) return false;"
+  + "var d=[].slice.call(c.querySelectorAll('div,button,a')).filter(function(e){"
+  + "  return (e.textContent||'').trim()==='Assignments' && e.offsetParent;});"
+  + "if(d.length){ d[0].click(); return true; } return false;})()";
 const ON_ASSIGNMENTS = "/Assignments/i.test(document.title) && document.querySelectorAll('.column-displayDueDate').length > 0";
 
 /* Read the assignments grid. Every cell carries a semantic class
@@ -203,9 +213,7 @@ async function pull(courseIds, say = () => {}) {
         results.push({ ou: link.ou, error: 'the ALEKS menu did not open' });
         continue;
       }
-      await wc.executeJavaScript(
-        "(function(){var a=document.getElementById('smt_hamburgermenu_button_input_assignmentList');if(a){a.click();return true}return false})()",
-        true).catch(() => {});
+      await wc.executeJavaScript(CLICK_ASSIGNMENTS, true).catch(() => {});
 
       if (!(await waitFor(wc, ON_ASSIGNMENTS, 40000))) {
         results.push({ ou: link.ou, error: 'could not reach the assignments list' });

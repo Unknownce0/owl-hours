@@ -17,5 +17,10 @@ contextBridge.exposeInMainWorld('owl', {
   readProgram: (id) => ipcRenderer.invoke('owl:program', id),
   prereqs: (codes, index) => ipcRenderer.invoke('owl:prereqs', { codes, index }),
   forecast: () => ipcRenderer.invoke('owl:forecast'),
-  pullCalendar: (orgUnits) => ipcRenderer.invoke('owl:calendar', orgUnits)
+  pullCalendar: (orgUnits) => ipcRenderer.invoke('owl:calendar', orgUnits),
+  /* Updates: check, then download and install only when asked. */
+  updateCheck: () => ipcRenderer.invoke('owl:updateCheck'),
+  updateDownload: () => ipcRenderer.invoke('owl:updateDownload'),
+  updateInstall: () => ipcRenderer.invoke('owl:updateInstall'),
+  onUpdate: (cb) => ipcRenderer.on('owl:update', (_e, payload) => cb(payload))
 });

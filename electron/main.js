@@ -8,6 +8,7 @@ const academicmap = require('./academicmap');
 const catalog = require('./catalog');
 const forecast = require('./forecast');
 const calendar = require('./calendar');
+const updater = require('./updater');
 
 let mainWindow = null;
 const REFRESH_EVERY = 6 * 60 * 60 * 1000;   // re-check D2L every six hours
@@ -163,6 +164,12 @@ ipcMain.handle('owl:calendar', async (_e, orgUnits) => {
   return { ok: true, items };
 });
 
+/* One-click updating. The check is cheap and runs on launch; nothing is
+   downloaded until the user asks, and nothing is installed until they say so. */
+ipcMain.handle('owl:updateCheck', () => updater.check());
+ipcMain.handle('owl:updateDownload', () => updater.download());
+ipcMain.handle('owl:updateInstall', () => updater.install());
+
 ipcMain.handle('owl:alekscheck', (_e, courseIds) => aleks.findCourses(courseIds || []));
 
 ipcMain.handle('owl:aleks', async (_e, courseIds) => {
@@ -172,7 +179,13 @@ ipcMain.handle('owl:aleks', async (_e, courseIds) => {
   const courses = res.courses.map((c) => ({
     ou: c.ou,
     items: c.items.map((i) => {
-      const done = /closed/i.test(i.status) || i.pct === 100;
+      /* "Closed" is the deadline having passed, NOT the work being finished —
+         an assignment never started reads Closed the moment it is late, so
+         this was marking missed work as complete. ALEKS states its real
+         answer in the progress column and the "N out of N topics completed"
+         detail behind it. */
+      const tp = String(i.details || '').match(/(\d+)\s+out of\s+(\d+)\s+topics completed/i);
+      const done = i.pct === 100 || !!(tp && +tp[2] > 0 && tp[1] === tp[2]);
       return {
         t: /quiz|test|exam/i.test(i.type) ? 'q' : 'a',
         n: i.n + '  (ALEKS)',
@@ -207,8 +220,11 @@ async function refreshQuietly() {
 
 app.whenReady().then(() => {
   const win = createWindow();
+  updater.init(send);
   win.webContents.once('did-finish-load', () => {
     setTimeout(refreshQuietly, 1500);
+    /* Ask GitHub once per launch whether there is anything newer. */
+    setTimeout(() => { updater.check(); }, 4000);
     setInterval(refreshQuietly, REFRESH_EVERY);
   });
   app.on('activate', () => {

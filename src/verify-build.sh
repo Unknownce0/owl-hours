@@ -46,6 +46,7 @@ check academicmap.js
 check catalog.js
 check forecast.js
 check calendar.js
+check updater.js
 check grabber-return.js
 check app/index.html
 check build/icon.png
@@ -59,6 +60,7 @@ contains academicmap.js "academic-maps"
 contains catalog.js "preview_course"
 contains forecast.js "course-forecasts"
 contains calendar.js "calendar/events/myEvents"
+contains updater.js "electron-updater"
 
 echo "privacy:"
 if grep -q "DEFAULT_DATA = null" "$OUT/app/index.html" 2>/dev/null; then
