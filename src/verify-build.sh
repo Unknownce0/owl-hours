@@ -43,6 +43,7 @@ check aleks.js
 check gradescope.js
 check calendar.js
 check updater.js
+check macupdate.js
 check grabber-return.js
 check app/index.html
 check build/icon.png
@@ -53,6 +54,8 @@ contains d2l.js "bounced to single sign-on"
 contains app/index.html "Refresh from D2L"
 contains calendar.js "calendar/events/myEvents"
 contains updater.js "electron-updater"
+contains macupdate.js "/usr/bin/ditto"
+contains updater.js "macupdate"
 
 echo "privacy:"
 if grep -q "DEFAULT_DATA = null" "$OUT/app/index.html" 2>/dev/null; then
@@ -61,12 +64,14 @@ else
   echo "  FAIL     coursework may be baked into the app"; FAIL=1
 fi
 
-# every local require() in main.js must be present in the package
+# every local require() in ANY packaged file must be present in the package —
+# not just main.js: updater.js pulls in macupdate.js, and a missing one of
+# those crashes the app on launch just the same
 echo "requires resolve:"
-grep -oE "require\('\./[a-zA-Z0-9_-]+'\)" "$OUT/main.js" 2>/dev/null | sed "s/require('\.\///;s/')//" | while read -r mod; do
+cat "$OUT"/*.js 2>/dev/null | grep -oE "require\('\./[a-zA-Z0-9_-]+'\)" | sed "s/require('\.\///;s/')//" | sort -u | while read -r mod; do
   if [ -e "$OUT/$mod.js" ]; then echo "  ok       ./$mod"; else echo "  MISSING  ./$mod"; fi
 done
-grep -oE "require\('\./[a-zA-Z0-9_-]+'\)" "$OUT/main.js" 2>/dev/null | sed "s/require('\.\///;s/')//" | while read -r mod; do
+cat "$OUT"/*.js 2>/dev/null | grep -oE "require\('\./[a-zA-Z0-9_-]+'\)" | sed "s/require('\.\///;s/')//" | sort -u | while read -r mod; do
   [ -e "$OUT/$mod.js" ] || exit 1
 done || FAIL=1
 

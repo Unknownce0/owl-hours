@@ -1,7 +1,7 @@
 {
   "name": "owl-hours",
   "productName": "Owl Hours",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Your Kennesaw State coursework in one place.",
   "main": "main.js",
   "private": true,

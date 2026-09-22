@@ -35,21 +35,87 @@ try {
 }
 const missing = () => ({ ok: false, error: 'this build has no updater' });
 
+/* On the Mac, electron-updater still reads the release feed, but the download
+   and install are done by macupdate.js instead of Squirrel, which rejects
+   ad-hoc signed builds. Windows keeps the standard path. */
+const isMac = process.platform === 'darwin';
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const macUpdate = require('./macupdate');
+
 let wired = false;
 let latest = null;
+let latestInfo = null;
+let sendFn = () => {};
+let prepared = null;           // { app, workDir, version } once a Mac update is unpacked
+
+/* owner/repo come from the feed file electron-builder writes into a release
+   build. A personal build has none, which is also what keeps it from updating. */
+function feedRepo() {
+  try {
+    const y = fs.readFileSync(path.join(process.resourcesPath, 'app-update.yml'), 'utf8');
+    const owner = (y.match(/^owner:\s*(\S+)/m) || [])[1];
+    const repo = (y.match(/^repo:\s*(\S+)/m) || [])[1];
+    return owner && repo ? { owner, repo } : null;
+  } catch (e) { return null; }
+}
+
+function macFile(info) {
+  const files = (info && info.files) || [];
+  const arm = process.arch === 'arm64';
+  return files.find((f) => /-mac\.zip$/.test(f.url) && (arm ? /arm64/.test(f.url) : !/arm64/.test(f.url)));
+}
+
+async function macDownload() {
+  if (!latestInfo) {
+    const r = await autoUpdater.checkForUpdates();
+    latestInfo = r && r.updateInfo;
+  }
+  const info = latestInfo;
+  const feed = feedRepo();
+  const file = macFile(info);
+  if (!info || !feed || !file) return { ok: false, error: 'couldn’t find the Mac download in this release' };
+
+  // No point downloading something that can't be installed where the app is.
+  const here = macUpdate.canReplace(macUpdate.bundlePath(process.execPath));
+  if (!here.ok) {
+    sendFn('owl:update', { state: 'error', message: here.why });
+    return { ok: true };
+  }
+
+  const url = /^https?:/.test(file.url) ? file.url
+    : 'https://github.com/' + feed.owner + '/' + feed.repo + '/releases/download/v' + info.version + '/' + encodeURIComponent(file.url);
+  const workDir = path.join(os.tmpdir(), 'owl-hours-update-' + info.version);
+  sendFn('owl:update', { state: 'downloading', percent: 0 });
+  try {
+    const app = await macUpdate.prepare({
+      url, sha512: file.sha512, workDir,
+      onProgress: (pct) => sendFn('owl:update', { state: 'downloading', percent: pct })
+    });
+    prepared = { app, workDir, version: info.version };
+    sendFn('owl:update', { state: 'ready', version: info.version });
+  } catch (e) {
+    sendFn('owl:update', { state: 'error', message: String((e && e.message) || e) });
+  }
+  return { ok: true };
+}
 
 /** @param {(channel:string, payload:any)=>void} send */
 function init(send) {
   if (!autoUpdater || wired) return;
   wired = true;
+  sendFn = send;
 
   autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = true;
+  // Never let Squirrel try an install on quit; on the Mac we install ourselves.
+  autoUpdater.autoInstallOnAppQuit = !isMac;
   // Unsigned/ad-hoc builds: let it try rather than refusing up front.
   autoUpdater.allowDowngrade = false;
 
   autoUpdater.on('update-available', (info) => {
     latest = info && info.version ? info.version : null;
+    latestInfo = info || null;
     send('owl:update', { state: 'available', version: latest });
   });
   autoUpdater.on('update-not-available', () => {
@@ -85,6 +151,10 @@ async function check() {
 
 async function download() {
   if (!autoUpdater) return missing();
+  if (isMac) {
+    try { return await macDownload(); }
+    catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
+  }
   try {
     await autoUpdater.downloadUpdate();
     return { ok: true };
@@ -96,6 +166,16 @@ async function download() {
 /** Replaces the running app and relaunches it. */
 function install() {
   if (!autoUpdater) return missing();
+  if (isMac) {
+    if (!prepared) return { ok: false, error: 'nothing has been downloaded yet' };
+    const bundle = macUpdate.bundlePath(process.execPath);
+    const here = macUpdate.canReplace(bundle);
+    if (!here.ok) return { ok: false, error: here.why };
+    macUpdate.launchSwap({ pid: process.pid, oldApp: bundle, newApp: prepared.app, workDir: prepared.workDir });
+    // The helper waits for this process to exit before it touches anything.
+    setTimeout(() => require('electron').app.quit(), 300);
+    return { ok: true };
+  }
   setImmediate(() => autoUpdater.quitAndInstall(false, true));
   return { ok: true };
 }
