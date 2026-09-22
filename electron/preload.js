@@ -11,12 +11,6 @@ contextBridge.exposeInMainWorld('owl', {
   pullAleks: (courseIds) => ipcRenderer.invoke('owl:aleks', courseIds),
   checkAleks: (courseIds) => ipcRenderer.invoke('owl:alekscheck', courseIds),
   pullGradescope: (interactive) => ipcRenderer.invoke('owl:gradescope', interactive),
-  /* Degree planning. The audit needs the Kennesaw sign-in; the maps are public. */
-  pullDegree: (interactive) => ipcRenderer.invoke('owl:degree', interactive),
-  listPrograms: () => ipcRenderer.invoke('owl:programs'),
-  readProgram: (id) => ipcRenderer.invoke('owl:program', id),
-  prereqs: (codes, index) => ipcRenderer.invoke('owl:prereqs', { codes, index }),
-  forecast: () => ipcRenderer.invoke('owl:forecast'),
   pullCalendar: (orgUnits) => ipcRenderer.invoke('owl:calendar', orgUnits),
   /* Updates: check, then download and install only when asked. */
   updateCheck: () => ipcRenderer.invoke('owl:updateCheck'),

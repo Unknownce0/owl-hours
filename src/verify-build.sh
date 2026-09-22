@@ -41,10 +41,6 @@ check preload.js
 check d2l.js
 check aleks.js
 check gradescope.js
-check degreeworks.js
-check academicmap.js
-check catalog.js
-check forecast.js
 check calendar.js
 check updater.js
 check grabber-return.js
@@ -55,10 +51,6 @@ echo "behaviour:"
 contains d2l.js "executeJavaScriptInIsolatedWorld"
 contains d2l.js "bounced to single sign-on"
 contains app/index.html "Refresh from D2L"
-contains degreeworks.js "api/students/myself"
-contains academicmap.js "academic-maps"
-contains catalog.js "preview_course"
-contains forecast.js "course-forecasts"
 contains calendar.js "calendar/events/myEvents"
 contains updater.js "electron-updater"
 
@@ -68,19 +60,6 @@ if grep -q "DEFAULT_DATA = null" "$OUT/app/index.html" 2>/dev/null; then
 else
   echo "  FAIL     coursework may be baked into the app"; FAIL=1
 fi
-
-# The DegreeWorks audit carries the student's name, KSU id, email and home phone
-# numbers. degreeworks.js is written to drop all of that, but a future change
-# could pass the raw audit through instead. These are field names that only
-# appear in raw audit JSON, so finding one means the whole record leaked.
-# (Checking for the actual id would mean writing it into this public file.)
-for leak in studentName studentEmail studentId; do
-  if grep -q "$leak" "$OUT/app/index.html" 2>/dev/null; then
-    echo "  FAIL     raw audit data baked in (found $leak)"; FAIL=1
-  else
-    echo "  ok       no $leak in the shipped page"
-  fi
-done
 
 # every local require() in main.js must be present in the package
 echo "requires resolve:"

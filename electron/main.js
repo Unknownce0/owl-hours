@@ -3,10 +3,6 @@ const path = require('path');
 const d2l = require('./d2l');
 const aleks = require('./aleks');
 const gradescope = require('./gradescope');
-const degreeworks = require('./degreeworks');
-const academicmap = require('./academicmap');
-const catalog = require('./catalog');
-const forecast = require('./forecast');
 const calendar = require('./calendar');
 const updater = require('./updater');
 
@@ -109,24 +105,6 @@ ipcMain.handle('owl:gradescope', async (_e, interactive) => {
   }));
   return { ok: true, courses };
 });
-
-/* DegreeWorks rides the same Kennesaw sign-in as D2L, so once one of them is
-   signed in the other usually needs no interaction at all. */
-ipcMain.handle('owl:degree', (_e, interactive) =>
-  degreeworks.pull(!!interactive, (text) => send('owl:status', text)));
-
-/* The academic maps are public, so these two never prompt for anything. */
-ipcMain.handle('owl:programs', () => academicmap.listPrograms());
-ipcMain.handle('owl:program', (_e, id) =>
-  academicmap.readProgram(id, (text) => send('owl:status', text)));
-
-/* Stage 2 of the degree planner: what you are cleared to take, and whether it
-   is expected to run. Both sources are public, so neither ever prompts. */
-ipcMain.handle('owl:prereqs', (_e, payload) => {
-  const p = payload || {};
-  return catalog.prereqs(p.codes || [], p.index || null, (text) => send('owl:status', text));
-});
-ipcMain.handle('owl:forecast', () => forecast.pull((text) => send('owl:status', text)));
 
 /* The calendar carries the things that are never submitted anywhere — most
    importantly sit-down exams. Shaped like every other row so the agenda and
