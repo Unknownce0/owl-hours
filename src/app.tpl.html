@@ -345,6 +345,23 @@ function isLegacyAleks(i){ return !i.src && i.x && /\(ALEKS\)\s*$/.test(i.n||"")
   });
   if(dropped) save(K.data, DATA);
 })();
+/* Early calendar pulls invented a "Not Submitted" status and let in textbook
+   chapters and discussion due dates. Current pulls never set a status on a
+   calendar row, so a status marks a row from that version. Keep the exams
+   (minus the invented status); drop the rest — the next pull re-adds anything
+   that still belongs. Runs offline, so it cannot be lost to a failed pull. */
+(function(){
+  var changed = 0;
+  (DATA.courses||[]).forEach(function(c){
+    c.items = (c.items||[]).filter(function(i){
+      if(i.src !== "cal" || !i.s) return true;
+      changed++;
+      if(i.exam){ delete i.s; return true; }
+      return false;
+    });
+  });
+  if(changed) save(K.data, DATA);
+})();
 var isCustom = !!stored;
 var isEmpty  = !DATA.courses || !DATA.courses.length;
 var sync     = load(K.sync,{url:"",auto:false});
@@ -1915,12 +1932,17 @@ if(DESKTOP){
   /* Gradescope costs nothing to check, so keep it current without asking.
      Silent on failure: a missing Gradescope sign-in is not worth a banner
      when the user may not even have a class that uses it. */
-  if(oncePerSession("owlhours.gs.pulled")) setTimeout(function(){ pullGradescope(false, null, null); }, 6000);
+  /* The session flag is set when the pull actually starts, not when it is
+     scheduled. The D2L refresh reloads the page ~1.5s after launch; flagging
+     at schedule time meant that reload killed the timer AND left the flag set,
+     so neither this nor the calendar pull ever ran after a successful launch. */
+  setTimeout(function(){ if(oncePerSession("owlhours.gs.pulled")) pullGradescope(false, null, null); }, 6000);
     /* Exams live only here, so this runs unattended like Gradescope — but it
        must not fail silently the way that one does. A lapsed sign-in meant the
        calendar pull returned "needs login", nobody was told, and an exam four
        days out simply never appeared. Worth one banner. */
-    if(oncePerSession("owlhours.cal.pulled")) setTimeout(function(){
+    setTimeout(function(){
+      if(!oncePerSession("owlhours.cal.pulled")) return;
       pullCalendar(null, function(ok, needLogin){
         if(!ok && needLogin){
           showSignInBar("Your exams live only in the D2L calendar, and Owl Hours can\u2019t read it until you sign in.");
