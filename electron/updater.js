@@ -11,12 +11,9 @@
  *
  *   - Windows updates only work from an *installed* app. A portable .exe has
  *     nothing on disk to replace, so the target is now NSIS.
- *   - macOS updates go through Squirrel.Mac, which verifies the code signature
- *     of the downloaded build against the running one. These builds are
- *     ad-hoc signed (no Apple Developer ID), and Squirrel is expected to
- *     refuse that. So the Mac path is allowed to fail, and says so plainly
- *     rather than looking like it worked — the caller then falls back to
- *     downloading the disk image.
+ *   - macOS would normally go through Squirrel.Mac, which refuses these
+ *     ad-hoc signed builds. So on the Mac the download and install are done by
+ *     macupdate.js instead; electron-updater only reads the release feed.
  *
  * autoDownload is off on purpose: nobody should be spending their data without
  * pressing something first.
@@ -128,13 +125,7 @@ function init(send) {
     send('owl:update', { state: 'ready', version: (info && info.version) || latest });
   });
   autoUpdater.on('error', (err) => {
-    const msg = String((err && err.message) || err);
-    /* Squirrel.Mac rejecting an ad-hoc signature is the expected outcome on a
-       Mac, not a mystery. Name it so the UI can offer the manual route
-       instead of showing a stack trace nobody can act on. */
-    const signature = process.platform === 'darwin' &&
-      /code signature|not signed|SQRL|CodeSign|sha512/i.test(msg);
-    send('owl:update', { state: 'error', message: msg, signature });
+    send('owl:update', { state: 'error', message: String((err && err.message) || err) });
   });
 }
 

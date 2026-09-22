@@ -284,7 +284,7 @@ details.br kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel);
 "use strict";
 
 var DEFAULT_DATA = null;
-var APP_VERSION  = "1.8.1";
+var APP_VERSION  = "1.8.2";
 /* A personal build carries its own coursework. Downloading the public
    release would replace it with an empty one, so never offer that here. */
 var PERSONAL     = /*__PERSONAL__*/false;
@@ -1546,18 +1546,10 @@ function offerRestart(version){
   });
 }
 
-/* Squirrel.Mac checks the signature of the downloaded build against the
-   running one, and these builds are ad-hoc signed. On a Mac that refusal is
-   expected, so say what it means and hand over the disk image rather than
-   showing an error nobody can act on. */
+/* If an update can't finish — no permission to replace the app, running from
+   the disk image, a failed download — say why and hand over the download. */
 function updateFailed(u){
   var url = "https://github.com/" + REPO + "/releases/latest";
-  if(u && u.signature){
-    showUpdateBar('<span class="utext"><b>A new version is out.</b> This Mac build isn’t signed by Apple, '+
-                  'so it can’t replace itself — grab the disk image instead.</span>'+
-                  '<a class="ubtn" href="'+esc(url)+'" target="_blank" rel="noopener">Download</a>');
-    return;
-  }
   showUpdateBar('<span class="utext"><b>Update failed.</b> '+esc((u&&u.message)||"Unknown problem")+'</span>'+
                 '<a class="ubtn" href="'+esc(url)+'" target="_blank" rel="noopener">Download</a>');
 }
