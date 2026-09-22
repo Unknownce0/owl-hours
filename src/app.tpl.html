@@ -1789,6 +1789,13 @@ function sameData(a, b){
   try { return JSON.stringify(a) === JSON.stringify(b); } catch(e){ return false; }
 }
 
+/* Launch-time pulls are marked only once they FINISH. The D2L refresh reloads
+   the page whenever it lands — before a pull starts, or halfway through one —
+   and a pull marked at start was lost to that reload and never retried. An
+   interrupted pull now simply runs again on the reloaded page. */
+function ranThisSession(k){ try { return !!sessionStorage.getItem(k); } catch(e){ return false; } }
+function markSession(k){ try { sessionStorage.setItem(k, "1"); } catch(e){} }
+
 /* A launch-time pull should happen once per app session, not once per reload. */
 function oncePerSession(k){
   try {
@@ -1959,14 +1966,18 @@ if(DESKTOP){
      scheduled. The D2L refresh reloads the page ~1.5s after launch; flagging
      at schedule time meant that reload killed the timer AND left the flag set,
      so neither this nor the calendar pull ever ran after a successful launch. */
-  setTimeout(function(){ if(oncePerSession("owlhours.gs.pulled")) pullGradescope(false, null, null); }, 6000);
+  setTimeout(function(){
+    if(ranThisSession("owlhours.gs.pulled")) return;
+    pullGradescope(false, null, function(){ markSession("owlhours.gs.pulled"); });
+  }, 6000);
     /* Exams live only here, so this runs unattended like Gradescope — but it
        must not fail silently the way that one does. A lapsed sign-in meant the
        calendar pull returned "needs login", nobody was told, and an exam four
        days out simply never appeared. Worth one banner. */
     setTimeout(function(){
-      if(!oncePerSession("owlhours.cal.pulled")) return;
+      if(ranThisSession("owlhours.cal.pulled")) return;
       pullCalendar(null, function(ok, needLogin){
+        markSession("owlhours.cal.pulled");
         if(!ok && needLogin){
           showSignInBar("Your exams live only in the D2L calendar, and Owl Hours can\u2019t read it until you sign in.");
         }
