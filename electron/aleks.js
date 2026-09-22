@@ -200,18 +200,48 @@ async function pull(courseIds, say = () => {}) {
       }
 
       say('Reading your assignments…');
-      await wc.executeJavaScript(`(function(){
+      /* A DOM .click() does not open this menu — exactly the lesson the class
+         tile taught further up. ALEKS binds these controls to real pointer
+         events, so find the button and send an actual mouse click at it. */
+      const menuBox = await wc.executeJavaScript(`(function(){
         var b = [].slice.call(document.querySelectorAll('button')).filter(function(x){
           var n = (x.getAttribute('aria-label') || x.innerText || '');
-          return /main menu/i.test(n);
+          return /main menu/i.test(n) && x.offsetParent;
         })[0];
-        if(b){ b.click(); return true; }
-        return false;
-      })()`, true).catch(() => {});
+        if(!b) return null;
+        var r = b.getBoundingClientRect();
+        return JSON.stringify({ x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) });
+      })()`, true).catch(() => null);
+
+      let mb = null;
+      try { mb = JSON.parse(menuBox); } catch (e) { mb = null; }
+      if (mb) {
+        wc.sendInputEvent({ type: 'mouseDown', x: mb.x, y: mb.y, button: 'left', clickCount: 1 });
+        wc.sendInputEvent({ type: 'mouseUp', x: mb.x, y: mb.y, button: 'left', clickCount: 1 });
+      }
 
       if (!(await waitFor(wc, MENU_OPEN, 15000))) {
-        results.push({ ou: link.ou, error: 'the ALEKS menu did not open' });
-        continue;
+        /* Fall back to a DOM click before giving up, and report what the page
+           actually looked like — "the menu did not open" on its own gave
+           nothing to work from. */
+        await wc.executeJavaScript(`(function(){
+          var b = [].slice.call(document.querySelectorAll('button')).filter(function(x){
+            var n = (x.getAttribute('aria-label') || x.innerText || '');
+            return /main menu/i.test(n);
+          })[0];
+          if(b){ b.click(); return true; }
+          return false;
+        })()`, true).catch(() => {});
+
+        if (!(await waitFor(wc, MENU_OPEN, 8000))) {
+          const seen = await wc.executeJavaScript(
+            "JSON.stringify({title:document.title,hasContainer:!!document.querySelector('.hamburger-menu-items-container'),"
+            + "buttons:[].slice.call(document.querySelectorAll('button')).map(function(b){"
+            + "return (b.getAttribute('aria-label')||b.innerText||'').replace(/\\s+/g,' ').trim().slice(0,24)}).filter(Boolean).slice(0,12)})",
+            true).catch(() => '{}');
+          results.push({ ou: link.ou, error: 'the ALEKS menu did not open', seen: seen });
+          continue;
+        }
       }
       await wc.executeJavaScript(CLICK_ASSIGNMENTS, true).catch(() => {});
 

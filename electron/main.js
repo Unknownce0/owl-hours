@@ -141,7 +141,31 @@ ipcMain.handle('owl:calendar', async (_e, orgUnits) => {
     const k = ev.ou + '|' + ev.start + '|' + ev.end;
     stamp[k] = (stamp[k] || 0) + 1;
   });
-  const bulk = (ev) => stamp[ev.ou + '|' + ev.start + '|' + ev.end] >= 5;
+
+  /* Exact-match alone was not enough. COMM 1100 carries fifteen textbook
+     chapter entries stamped 2:53 to 2:56 one afternoon — bulk-added a minute
+     apart as the instructor clicked through, so no two share an instant and
+     all fifteen sailed past the filter into the agenda as overdue work.
+     The tell is the spread itself: real deadlines in a course land on the
+     same instant (11:59pm), while bulk-stamped content dribbles across a few
+     minutes. So: five or more in one course inside a quarter hour, not all at
+     the same moment. */
+  const byCourse = {};
+  res.events.forEach((ev) => {
+    const t = Date.parse(ev.start);
+    if (!isFinite(t)) return;
+    (byCourse[ev.ou] = byCourse[ev.ou] || []).push(t);
+  });
+  const WINDOW = 15 * 60 * 1000;
+  const smeared = (ev) => {
+    const t = Date.parse(ev.start);
+    if (!isFinite(t)) return false;
+    const near = (byCourse[ev.ou] || []).filter((x) => Math.abs(x - t) <= WINDOW);
+    if (near.length < 5) return false;
+    return near.some((x) => x !== t);      // spread, not one shared deadline
+  };
+
+  const bulk = (ev) => stamp[ev.ou + '|' + ev.start + '|' + ev.end] >= 5 || smeared(ev);
 
   const items = res.events.filter((ev) => !bulk(ev)).map((ev) => {
     const timed = calendar.isScheduled(ev);
@@ -153,7 +177,10 @@ ipcMain.handle('owl:calendar', async (_e, orgUnits) => {
          it starts, not when it ends. For a deadline the end is the deadline. */
       d: timed ? ev.start : (ev.end || ev.start),
       n: ev.n + (timed ? '  (scheduled)' : ''),
-      s: 'Not Submitted',
+      /* A calendar entry carries no submission state — there is nothing to
+         submit to. Claiming "Not Submitted" invented a fact and painted work
+         already finished as outstanding. Leave it blank; the tick box is
+         there for anyone who wants to mark it off. */
       where: ev.where || undefined,
       timed: timed ? 1 : undefined,
       exam: isExam ? 1 : undefined,
@@ -185,7 +212,12 @@ ipcMain.handle('owl:aleks', async (_e, courseIds) => {
          answer in the progress column and the "N out of N topics completed"
          detail behind it. */
       const tp = String(i.details || '').match(/(\d+)\s+out of\s+(\d+)\s+topics completed/i);
-      const done = i.pct === 100 || !!(tp && +tp[2] > 0 && tp[1] === tp[2]);
+      /* A test or knowledge check is one sitting: any recorded result means it
+         was taken. Requiring 100% marked a sat test as "Not Submitted". */
+      const oneSitting = /quiz|test|exam|knowledge check/i.test((i.type || '') + ' ' + (i.n || ''));
+      const done = oneSitting
+        ? (i.pct != null && i.pct > 0) || /submitted|completed/i.test(i.status || '')
+        : i.pct === 100 || !!(tp && +tp[2] > 0 && tp[1] === tp[2]);
       return {
         t: /quiz|test|exam/i.test(i.type) ? 'q' : 'a',
         n: i.n + '  (ALEKS)',

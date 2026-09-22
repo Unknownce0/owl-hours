@@ -21,14 +21,26 @@
  * autoDownload is off on purpose: nobody should be spending their data without
  * pressing something first.
  */
-const { autoUpdater } = require('electron-updater');
+/* Loaded defensively. update-my-app.sh patches a personal build by copying
+   the .js files into the existing bundle — it does not carry node_modules
+   across, so requiring this at the top crashed that app on launch before the
+   window even opened. A personal build never auto-updates anyway (it would
+   overwrite its own baked-in coursework), so the right behaviour when the
+   dependency is absent is to do nothing quietly, not to die. */
+let autoUpdater = null;
+try {
+  autoUpdater = require('electron-updater').autoUpdater;
+} catch (e) {
+  autoUpdater = null;
+}
+const missing = () => ({ ok: false, error: 'this build has no updater' });
 
 let wired = false;
 let latest = null;
 
 /** @param {(channel:string, payload:any)=>void} send */
 function init(send) {
-  if (wired) return;
+  if (!autoUpdater || wired) return;
   wired = true;
 
   autoUpdater.autoDownload = false;
@@ -61,6 +73,7 @@ function init(send) {
 }
 
 async function check() {
+  if (!autoUpdater) return missing();
   try {
     const r = await autoUpdater.checkForUpdates();
     const v = r && r.updateInfo ? r.updateInfo.version : null;
@@ -71,6 +84,7 @@ async function check() {
 }
 
 async function download() {
+  if (!autoUpdater) return missing();
   try {
     await autoUpdater.downloadUpdate();
     return { ok: true };
@@ -81,6 +95,7 @@ async function download() {
 
 /** Replaces the running app and relaunches it. */
 function install() {
+  if (!autoUpdater) return missing();
   setImmediate(() => autoUpdater.quitAndInstall(false, true));
   return { ok: true };
 }
