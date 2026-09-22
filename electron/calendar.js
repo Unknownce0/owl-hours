@@ -49,7 +49,7 @@ function readJS(orgUnits, fromISO, toISO) {
             end: x.EndDateTime,
             allDay: !!x.IsAllDayEvent,
             where: x.LocationName || '',
-            entity: x.AssociatedEntity ? x.AssociatedEntity.EntityType : null
+            entity: x.AssociatedEntity ? (x.AssociatedEntity.AssociatedEntityType || 'linked') : null
           });
         }
       } catch (e) { /* one bad course must not lose the rest */ }

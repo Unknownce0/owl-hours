@@ -172,7 +172,13 @@ ipcMain.handle('owl:calendar', async (_e, orgUnits) => {
 
   const bulk = (ev) => stamp[ev.ou + '|' + ev.start + '|' + ev.end] >= 5 || smeared(ev);
 
-  const items = res.events.filter((ev) => !bulk(ev)).map((ev) => {
+  /* An event attached to a quiz, dropbox or discussion is only that item's due
+     date — the item itself is already on the page with its real done status.
+     Adding the calendar copy too gave a second row with no status, which read
+     as overdue forever: COMM's "Unit 1"/"Unit 2" were exactly that. Events
+     attached to content pages are reading markers. What is left, attached to
+     nothing, is a sit-down exam: the one thing only the calendar knows. */
+  const items = res.events.filter((ev) => !ev.entity && !bulk(ev)).map((ev) => {
     const timed = calendar.isScheduled(ev);
     const isExam = /\b(exam|midterm|final|test)\b/i.test(ev.n);
     return {

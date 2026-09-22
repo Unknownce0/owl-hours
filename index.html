@@ -305,7 +305,7 @@ details.br kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel);
 "use strict";
 
 var DEFAULT_DATA = null;
-var APP_VERSION  = "1.6.2";
+var APP_VERSION  = "1.6.3";
 /* A personal build carries its own coursework. Downloading the public
    release would replace it with an empty one, so never offer that here. */
 var PERSONAL     = /*__PERSONAL__*/false;
@@ -1799,15 +1799,20 @@ function pullCalendar(note, done){
       return;
     }
     var next = JSON.parse(JSON.stringify(DATA));
-    var added = 0, exams = 0;
+    var added = 0, exams = 0, removed = 0;
 
     next.courses.forEach(function(c){
+      /* Clear last run's calendar rows in EVERY course, before asking whether
+         this run found anything. Doing it after the early return below meant a
+         course whose events were all filtered out (COMM 1100's bulk-stamped
+         textbook chapters) kept its stale rows forever. */
+      var before = (c.items||[]).length;
+      c.items = (c.items||[]).filter(function(i){ return i.src !== "cal"; });
+      removed += before - c.items.length;
+
       var mine = res.items.filter(function(i){ return i.ou === c.id; });
       if(!mine.length) return;
 
-      /* Compare against what the course already has, ignoring rows this same
-         merge added last time so a re-run replaces rather than accumulates. */
-      c.items = (c.items||[]).filter(function(i){ return i.src !== "cal"; });
       var have = {};
       (c.items||[]).forEach(function(i){ have[calKey(i.n)] = 1; });
 
@@ -1824,14 +1829,15 @@ function pullCalendar(note, done){
       });
     });
 
-    if(!added || sameData(next, DATA)){
+    /* A clean-up with nothing added is still a change worth saving. */
+    if(sameData(next, DATA)){
       if(note) note("Nothing new in the calendar.");
       if(done) done(false);
       return;
     }
     save(K.data, next);
-    if(note) note("Added "+added+" calendar item"+(added===1?"":"s")
-                  +(exams?" including "+exams+" exam"+(exams===1?"":"s"):"")+". Reloading…");
+    if(note) note("Calendar: "+added+" added, "+removed+" replaced or removed"
+                  +(exams?", including "+exams+" exam"+(exams===1?"":"s"):"")+". Reloading…");
     if(done) done(true);
     setTimeout(function(){ location.reload(); }, 700);
   }, function(){ if(done) done(false); });
