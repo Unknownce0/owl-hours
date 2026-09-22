@@ -88,19 +88,24 @@ ipcMain.handle('owl:signout', () => d2l.signOut());
 ipcMain.handle('owl:gradescope', async (_e, interactive) => {
   const res = await gradescope.pull(!!interactive, (text) => send('owl:status', text));
   if (!res.ok) return res;
+  /* Once graded, Gradescope replaces the status with the score itself
+     ("105.0 / 100.0"). Saved verbatim, no rule recognised it as done. */
+  const score = (st) => String(st || '').match(/^\s*(-?[\d.]+)\s*\/\s*([\d.]+)\s*$/);
   const courses = res.courses.map((c) => ({
     code: c.code,
     name: c.name,
-    items: c.items.map((i) => ({
+    items: c.items.map((i) => { const sc = score(i.status); return {
       t: 'a',
       n: i.n + '  (Gradescope)',
       d: i.d || undefined,
       o: i.o || undefined,
-      s: /no submission/i.test(i.status) ? 'Not Submitted' : (i.status || 'Submitted'),
+      s: sc ? 'Graded' : /no submission/i.test(i.status) ? 'Not Submitted' : (i.status || 'Submitted'),
+      e: sc ? +sc[1] : undefined,
+      p: sc ? +sc[2] : undefined,
       u: i.u ? 'https://www.gradescope.com' + i.u : 'https://www.gradescope.com' + c.href,
       x: 1,
       src: 'gs'
-    }))
+    }; })
   }));
   return { ok: true, courses };
 });

@@ -441,6 +441,8 @@ function autoDone(it){
      not "Submitted", which an obvious-looking regex misses entirely. */
   if(/\d+\s*submission/i.test(s)) return true;
   if(/submitted|completed|graded|closed|feedback/i.test(s)) return true;
+  /* Gradescope shows a bare score ("105.0 / 100.0") once something is graded. */
+  if(/^\s*-?[\d.]+\s*\/\s*[\d.]+\s*$/.test(s)) return true;
   if(it.earned != null) return true;
   /* A quiz you have sat is done. D2L reports this as an attempt count -
      "1 / Unlimited" for taken, "0 / Unlimited" for not. */
