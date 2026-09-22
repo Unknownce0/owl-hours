@@ -107,9 +107,9 @@ if [ -n "$VERSION" ]; then
       --title "Owl Hours $VERSION" \
       --notes "Download the file for your computer.
 
-- **Mac (Apple Silicon)** — \`Owl Hours-*-arm64.dmg\`
-- **Mac (Intel)** — \`Owl Hours-*.dmg\` (no arm64 in the name)
-- **Windows** — \`Owl-Hours-Windows.exe\`
+- **Mac (Apple Silicon)** — \`Owl-Hours-*-arm64.dmg\`
+- **Mac (Intel)** — \`Owl-Hours-*-x64.dmg\`
+- **Windows** — \`Owl-Hours-Windows-*-Setup.exe\`
 
 These are unsigned, so the first launch needs a nudge: on macOS right-click the app and choose **Open**; on Windows click **More info → Run anyway**.
 

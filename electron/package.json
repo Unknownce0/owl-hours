@@ -42,11 +42,13 @@
         }
       ],
       "category": "public.app-category.education",
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "artifactName": "Owl-Hours-${version}-${arch}-mac.${ext}"
     },
     "dmg": {
       "title": "Owl Hours",
-      "writeUpdateInfo": false
+      "writeUpdateInfo": false,
+      "artifactName": "Owl-Hours-${version}-${arch}.${ext}"
     },
     "win": {
       "target": [
