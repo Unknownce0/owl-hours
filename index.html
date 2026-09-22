@@ -32,6 +32,7 @@
   --gold:#9A7400; --gold-ink:#6E5300; --gold-soft:rgba(154,116,0,.13);
   --red:#A93A2A; --red-soft:rgba(169,58,42,.10);
   --green:#3B7A56; --green-soft:rgba(59,122,86,.12);
+  --exam:#7A4FB0; --exam-soft:rgba(122,79,176,.13);
   --c1:#3F6D9E; --c2:#6C5CA8; --c3:#2F7D63; --c4:#A05C86; --c5:#8A6E2A; --c6:#4A6E78;
   --shadow:0 1px 2px rgba(26,24,19,.05), 0 8px 24px -12px rgba(26,24,19,.16);
   --r:10px;
@@ -45,7 +46,7 @@
     --ink:#F2EDE0; --muted:#A79E8A; --faint:#7B7466; --line:#332F25;
     --gold:#E8B33E; --gold-ink:#F0C86F; --gold-soft:rgba(232,179,62,.16);
     --red:#E2705C; --red-soft:rgba(226,112,92,.15);
-    --green:#6FBF8E; --green-soft:rgba(111,191,142,.15);
+    --green:#6FBF8E; --green-soft:rgba(111,191,142,.15); --exam:#B99AE6; --exam-soft:rgba(185,154,230,.16);
     --c1:#7FAAD8; --c2:#A796E0; --c3:#6BC49E; --c4:#D492BA; --c5:#C9A857; --c6:#85AEB8;
     --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.6);
   }
@@ -55,7 +56,7 @@
   --ink:#F2EDE0; --muted:#A79E8A; --faint:#7B7466; --line:#332F25;
   --gold:#E8B33E; --gold-ink:#F0C86F; --gold-soft:rgba(232,179,62,.16);
   --red:#E2705C; --red-soft:rgba(226,112,92,.15);
-  --green:#6FBF8E; --green-soft:rgba(111,191,142,.15);
+  --green:#6FBF8E; --green-soft:rgba(111,191,142,.15); --exam:#B99AE6; --exam-soft:rgba(185,154,230,.16);
   --c1:#7FAAD8; --c2:#A796E0; --c3:#6BC49E; --c4:#D492BA; --c5:#C9A857; --c6:#85AEB8;
   --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.6);
 }
@@ -139,6 +140,9 @@ a{color:var(--gold-ink)}
 .pill.miss{background:var(--red-soft);color:var(--red)}
 .pill.todo{background:var(--gold-soft);color:var(--gold)}
 .pill.ok{background:var(--green-soft);color:var(--green)}
+.pill.exam{background:var(--exam-soft);color:var(--exam);font-weight:600}
+.pill.where{background:transparent;border:1px solid var(--exam);color:var(--exam)}
+.rel.past{color:var(--faint)}
 .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
 
 /* ---------- filters ---------- */
@@ -305,7 +309,7 @@ details.br kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel);
 "use strict";
 
 var DEFAULT_DATA = null;
-var APP_VERSION  = "1.6.4";
+var APP_VERSION  = "1.7.0";
 /* A personal build carries its own coursework. Downloading the public
    release would replace it with an empty one, so never offer that here. */
 var PERSONAL     = /*__PERSONAL__*/false;
@@ -419,9 +423,15 @@ var items = [];
   (c.items||[]).forEach(function(it){
     var due = it.d ? new Date(it.d) : null;
     var t   = TYPE[it.t] || "item";
+    /* A calendar exam attached to no D2L quiz is sat in a room, not online. */
+    var ev  = it.src === "cal";
+    var isExam = ev && !!it.exam;
     items.push({
       key: c.id+"|"+it.t+"|"+it.n,
-      course: c.id, type: t, name: it.n,
+      course: c.id, type: isExam ? "exam" : t,
+      name: ev ? String(it.n).replace(/\s*\(scheduled\)\s*$/,"") : it.n,
+      event: ev, exam: isExam, timed: !!it.timed, where: it.where || null,
+      end: it.end ? new Date(it.end) : null,
       due: due, opens: it.o?new Date(it.o):null,
       url: it.u ? "https://kennesaw.view.usg.edu"+it.u : null,
       status: it.s||null, points: (it.p!=null?it.p:null),
@@ -472,8 +482,15 @@ function relative(d){
 /* D2L and ALEKS already tell us what is finished - a submission status, a score,
    a closed assignment. Read that instead of waiting to be told twice.
    done[key] is the manual override: 1 = ticked by hand, 0 = un-ticked by hand. */
+function tookPlace(it){
+  var fin = it.end || it.due;
+  return !!(it.event && it.timed && fin && fin.getTime() < now.getTime());
+}
 function autoDone(it){
   if(it.todo) return false;
+  /* Nothing is handed in for an exam you sit in a room — once it is over, it
+     happened. Before this it read as "overdue" forever. */
+  if(it.event && it.timed) return tookPlace(it);
   var s = it.status || "";
   if(/not submitted|not started|no submission/i.test(s)) return false;
   /* D2L writes "1 Submission, 1 File" for handed-in work - note "Submission",
@@ -505,6 +522,7 @@ function visible(){
 function bucketOf(it){
   if(it.stale) return "stale";
   if(!it.due)  return "undated";
+  if(tookPlace(it)) return "past";
   var n = daysOut(it.due);
   if(it.due.getTime() < now.getTime() && n<=0) return "overdue";
   if(n===0) return "today";
@@ -518,6 +536,7 @@ var BUCKETS = [
   {k:"tomorrow", label:"Tomorrow",            cls:"is-now"},
   {k:"week",     label:"Next 7 days",         cls:""},
   {k:"later",    label:"Later this term",     cls:""},
+  {k:"past",     label:"Already happened",    cls:""},
   {k:"undated",  label:"No due date in D2L",  cls:""},
   {k:"stale",    label:"Check these dates",   cls:""}
 ];
@@ -536,19 +555,23 @@ function rowHTML(it){
        (it.url?'<a href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.name)+'</a>':esc(it.name))+
        '</div><div class="r-meta">';
   if(c) h += '<span class="pill course" style="color:'+c.color+'">'+esc(c.code)+'</span>';
-  h += pill(it.todo?"my task":it.type);
+  h += pill(it.todo?"my task":it.type, it.exam?"exam":"");
+  if(it.exam && it.timed) h += pill(it.where ? "in person \u00b7 "+it.where : "likely in person","where");
   if(it.points!=null) h += pill(it.points+" pts","pts");
   if(it.status && /Not Submitted/i.test(it.status)) h += pill("not submitted","miss");
   if(it.attempts != null) h += pill(it.maxAttempts ? it.attempts+"/"+it.maxAttempts+" attempts"
                                                     : it.attempts+(it.attempts===1?" attempt":" attempts"),"pts");
   if(it.stale) h += pill("date looks stale","stale");
-  if(complete && done[it.key] !== 1) h += pill(/closed|completed/i.test(it.status||"") ? "done" : "submitted","ok");
+  if(complete && done[it.key] !== 1 && !it.event) h += pill(/closed|completed/i.test(it.status||"") ? "done" : "submitted","ok");
   h += '</div></div>';
   h += '<div class="r-when">';
   if(it.due){
     var r = relative(it.due);
-    h += '<div class="abs mono">'+fmtDate(it.due)+' &middot; '+fmtTime(it.due)+'</div>';
-    h += '<div class="rel mono '+(it.stale?"":r.c)+'">'+(it.stale?"from a past term":r.t)+'</div>';
+    var span = (it.event && it.end && it.end > it.due) ? fmtTime(it.due).replace(/[ap]$/,"")+"\u2013"+fmtTime(it.end) : fmtTime(it.due);
+    if(it.event && it.end && it.end > it.due && fmtTime(it.due).slice(-1) !== fmtTime(it.end).slice(-1)) span = fmtTime(it.due)+"\u2013"+fmtTime(it.end);
+    h += '<div class="abs mono">'+fmtDate(it.due)+' &middot; '+span+'</div>';
+    if(tookPlace(it)) h += '<div class="rel mono past">took place</div>';
+    else h += '<div class="rel mono '+(it.stale?"":r.c)+'">'+(it.stale?"from a past term":r.t)+'</div>';
   } else {
     h += '<div class="rel mono">no date</div>';
   }

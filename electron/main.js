@@ -193,6 +193,8 @@ ipcMain.handle('owl:calendar', async (_e, orgUnits) => {
          already finished as outstanding. Leave it blank; the tick box is
          there for anyone who wants to mark it off. */
       where: ev.where || undefined,
+      /* kept so the page can show the whole window and know when it is over */
+      end: timed ? ev.end : undefined,
       timed: timed ? 1 : undefined,
       exam: isExam ? 1 : undefined,
       x: 1,
