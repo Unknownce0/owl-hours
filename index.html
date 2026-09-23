@@ -284,7 +284,7 @@ details.br kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel);
 "use strict";
 
 var DEFAULT_DATA = null;
-var APP_VERSION  = "1.8.2";
+var APP_VERSION  = "1.8.3";
 /* A personal build carries its own coursework. Downloading the public
    release would replace it with an empty one, so never offer that here. */
 var PERSONAL     = /*__PERSONAL__*/false;
@@ -407,6 +407,9 @@ var items = [];
       course: c.id, type: isExam ? "exam" : t,
       name: ev ? String(it.n).replace(/\s*\(scheduled\)\s*$/,"") : it.n,
       event: ev, exam: isExam, timed: !!it.timed, where: it.where || null,
+      src: it.src || null,
+      /* ALEKS reports a percentage: progress while open, the final score once closed */
+      aleksPct: (it.src === "aleks" && it.e != null) ? it.e : null,
       end: it.end ? new Date(it.end) : null,
       due: due, opens: it.o?new Date(it.o):null,
       url: it.u ? "https://kennesaw.view.usg.edu"+it.u : null,
@@ -467,6 +470,9 @@ function autoDone(it){
   /* Nothing is handed in for an exam you sit in a room — once it is over, it
      happened. Before this it read as "overdue" forever. */
   if(it.event && it.timed) return tookPlace(it);
+  /* Rows saved before this rule: ALEKS auto-submits at the deadline, so any
+     progress on a closed ALEKS assignment is a submitted score. */
+  if(it.src === "aleks" && it.aleksPct > 0 && it.due && it.due.getTime() < now.getTime()) return true;
   var s = it.status || "";
   if(/not submitted|not started|no submission/i.test(s)) return false;
   /* D2L writes "1 Submission, 1 File" for handed-in work - note "Submission",
@@ -533,8 +539,10 @@ function rowHTML(it){
   if(c) h += '<span class="pill course" style="color:'+c.color+'">'+esc(c.code)+'</span>';
   h += pill(it.todo?"my task":it.type, it.exam?"exam":"");
   if(it.exam && it.timed) h += pill(it.where ? "in person \u00b7 "+it.where : "likely in person","where");
-  if(it.points!=null) h += pill(it.points+" pts","pts");
-  if(it.status && /Not Submitted/i.test(it.status)) h += pill("not submitted","miss");
+  /* Assignments only: for an ALEKS test the number's meaning isn't confirmed. */
+  if(it.aleksPct != null && it.type === "assignment") h += pill(it.aleksPct+"%","pts");
+  else if(it.points!=null) h += pill(it.points+" pts","pts");
+  if(!complete && it.status && /Not Submitted/i.test(it.status)) h += pill("not submitted","miss");
   if(it.attempts != null) h += pill(it.maxAttempts ? it.attempts+"/"+it.maxAttempts+" attempts"
                                                     : it.attempts+(it.attempts===1?" attempt":" attempts"),"pts");
   if(it.stale) h += pill("date looks stale","stale");

@@ -209,12 +209,17 @@ ipcMain.handle('owl:aleks', async (_e, courseIds) => {
       const done = oneSitting
         ? (i.pct != null && i.pct > 0) || /submitted|completed/i.test(i.status || '')
         : i.pct === 100 || !!(tp && +tp[2] > 0 && tp[1] === tp[2]);
+      /* ALEKS submits whatever is done when the deadline hits, so past the due
+         date any progress is a submitted score (70% is a grade, not a miss).
+         Only 0% past the deadline is actually missed. */
+      const pastDue = !!(i.d && Date.parse(i.d) < Date.now());
+      const autoSubmitted = !done && pastDue && i.pct != null && i.pct > 0;
       return {
         t: /quiz|test|exam/i.test(i.type) ? 'q' : 'a',
         n: i.n + '  (ALEKS)',
         d: i.d || undefined,
         o: i.o || undefined,
-        s: done ? 'Completed' : 'Not Submitted',
+        s: done ? 'Completed' : autoSubmitted ? 'Submitted' : 'Not Submitted',
         e: i.pct != null ? i.pct : undefined,
         p: i.pct != null ? 100 : undefined,
         x: 1,
