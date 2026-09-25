@@ -460,9 +460,11 @@ function autoDone(it){
   /* Gradescope shows a bare score ("105.0 / 100.0") once something is graded. */
   if(/^\s*-?[\d.]+\s*\/\s*[\d.]+\s*$/.test(s)) return true;
   if(it.earned != null) return true;
-  /* A quiz you have sat is done. D2L reports this as an attempt count -
-     "1 / Unlimited" for taken, "0 / Unlimited" for not. */
-  if(it.attempts != null && it.attempts > 0) return true;
+  /* D2L counts an attempt from the moment you START a quiz, so an attempt
+     alone can mean "taking it right now". A graded quiz is caught above (the
+     gradebook marks it Completed); otherwise an attempt only settles it once
+     the quiz has closed. Before that it is "attempt started", not done. */
+  if(it.attempts != null && it.attempts > 0 && it.due && it.due.getTime() < now.getTime()) return true;
   return false;
 }
 function isDone(it){
@@ -523,6 +525,7 @@ function rowHTML(it){
   if(!complete && it.status && /Not Submitted/i.test(it.status)) h += pill("not submitted","miss");
   if(it.attempts != null) h += pill(it.maxAttempts ? it.attempts+"/"+it.maxAttempts+" attempts"
                                                     : it.attempts+(it.attempts===1?" attempt":" attempts"),"pts");
+  if(!complete && it.type === "quiz" && it.attempts > 0) h += pill("attempt started","stale");
   if(it.stale) h += pill("date looks stale","stale");
   if(complete && done[it.key] !== 1 && !it.event) h += pill(/closed|completed/i.test(it.status||"") ? "done" : "submitted","ok");
   h += '</div></div>';
@@ -825,7 +828,7 @@ var SCRAPER = "javascript:(function(){var M={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5
 "function PA(doc){var o=[],s={};doc.querySelectorAll('table').forEach(function(t){var hd=tx(t.querySelector('tr'));if(!/Assignment/i.test(hd)||!/Completion Status/i.test(hd))return;[].slice.call(t.querySelectorAll('tr'),1).forEach(function(tr){var c=[].slice.call(tr.querySelectorAll('th,td'));if(c.length<2)return;var raw=tx(c[0]);if(!raw||NO.test(raw))return;var n=cl(raw.split(CUT)[0]);if(!n||s[n])return;s[n]=1;var rt=tx(tr),a=tr.querySelector('a[href]'),sc=rt.match(/([\\d.]+|-)\\s*\\/\\s*([\\d.]+)/);var st='';c.slice(1).forEach(function(x){var v=tx(x);if(/Submitted|Submission|Draft|Completed|Graded|Feedback/i.test(v)&&!st)st=v});"+
 "o.push({t:'a',n:n,o:af(raw,'Available on'),d:af(raw,'Due on')||af(raw,'Available until')||af(raw,'Ends'),s:st||null,e:sc&&sc[1]!='-'?+sc[1]:null,p:sc?+sc[2]:null,u:a?a.getAttribute('href'):null})})});return o}"+
 "function PQ(doc,ou){var o=[],sec='Current';doc.querySelectorAll('table tr').forEach(function(tr){var rt=tx(tr);if(/^Past Quizzes/i.test(rt))sec='Past';else if(/^Current Quizzes/i.test(rt))sec='Current';var a=null;[].forEach.call(tr.querySelectorAll('a'),function(x){if(!a&&/GoToQuiz/.test(x.getAttribute('onclick')||''))a=x});if(!a)return;var q=((a.getAttribute('onclick')||'').match(/GoToQuiz\\((\\d+)/)||[])[1]||null;var n=cl(a.innerText);if(!n)return;var al=ds(rt);var d=af(rt,'Due on');if(!d){var ui=rt.indexOf(' until ');if(ui>=0){var x=ds(rt.slice(ui,ui+50));if(x.length)d=x[0]}}if(!d)d=al.length?al[al.length-1]:null;var op=af(rt,'Available on')||(al.length?al[0]:null);var at=rt.match(/(\\d+)\\s*\\/\\s*(\\d+|Unlimited)\\s*$/i);"+
-"o.push({t:'q',n:n,sec:sec,o:op,d:d,at:at?+at[1]:null,am:at?(/^\\d+$/.test(at[2])?+at[2]:0):null,u:q?'/d2l/lms/quizzing/user/quiz_summary.d2l?qi='+q+'&ou='+ou:null})});return o}"+
+"o.push({t:'q',n:n,sec:sec,o:op,d:d,tid:q,at:at?+at[1]:null,am:at?(/^\\d+$/.test(at[2])?+at[2]:0):null,u:q?'/d2l/lms/quizzing/user/quiz_summary.d2l?qi='+q+'&ou='+ou:null})});return o}"+
 /* D2L's discussion list shows class-wide counts, never whether YOU posted.
    The API does: a post with no ParentPostId is an initial post, one with a
    parent is a reply - exactly the two halves these rubrics grade. */
