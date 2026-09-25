@@ -16,7 +16,7 @@ function createWindow() {
     minWidth: 380,
     minHeight: 500,
     title: 'Owl Hours',
-    backgroundColor: '#14130F',
+    backgroundColor: '#0B0E14',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     icon: path.join(__dirname, 'build', 'icon.png'),
     webPreferences: {
@@ -76,6 +76,8 @@ ipcMain.handle('owl:grab', async (_e, interactive) => {
 });
 
 ipcMain.handle('owl:signout', () => d2l.signOut());
+/* Disconnecting one source from Sync (Gradescope) forgets just that site. */
+ipcMain.handle('owl:forgetSite', (_e, origin) => d2l.forget(origin));
 
 /* ALEKS is manual on purpose: it allows one session per account, so a
    background pull would sign the user out of ALEKS mid-homework. */

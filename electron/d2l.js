@@ -123,4 +123,12 @@ async function signOut() {
   return { ok: true };
 }
 
-module.exports = { grab, signOut };
+/* Only sites Owl Hours reads may be forgotten one at a time. */
+const FORGETTABLE = ['https://www.gradescope.com'];
+async function forget(origin) {
+  if (!FORGETTABLE.includes(origin)) return { ok: false, error: 'not a site Owl Hours reads' };
+  await d2lSession().clearStorageData({ origin });
+  return { ok: true };
+}
+
+module.exports = { grab, signOut, forget };

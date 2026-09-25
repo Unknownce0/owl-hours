@@ -1,261 +1,358 @@
 <title>Owl Hours</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&family=Hanken+Grotesk:wght@400;500;600&display=swap">
 
 <style>
+/* Night Shift. Night is the primary theme; Day is the same token names with
+   daylight values. The rules behind these values live in the design system:
+   one lamp per screen, time is the layout, round where you touch. */
 :root{
-  --bg:#FAF8F2; --panel:#FFFFFF; --panel-2:#F3EFE4; --panel-3:#EDE8DA;
-  --ink:#1A1813; --muted:#6B6558; --faint:#958E7D; --line:#E5DFD1;
-  --gold:#9A7400; --gold-ink:#6E5300; --gold-soft:rgba(154,116,0,.13);
-  --red:#A93A2A; --red-soft:rgba(169,58,42,.10);
-  --green:#3B7A56; --green-soft:rgba(59,122,86,.12);
-  --exam:#7A4FB0; --exam-soft:rgba(122,79,176,.13);
-  --c1:#3F6D9E; --c2:#6C5CA8; --c3:#2F7D63; --c4:#A05C86; --c5:#8A6E2A; --c6:#4A6E78;
-  --shadow:0 1px 2px rgba(26,24,19,.05), 0 8px 24px -12px rgba(26,24,19,.16);
-  --r:10px;
-  --display:"Familjen Grotesk", "Trebuchet MS", sans-serif;
-  --body:"IBM Plex Sans", system-ui, -apple-system, sans-serif;
-  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --ground:#0B0E14; --ground-raised:#121722; --ground-hover:#1A2030;
+  --rule:#262D3B; --rule-strong:#636D81;
+  --ink:#ECE8E1; --ink-muted:#9AA3B2; --ink-faint:#7E889B;
+  --lamp:#FFA94D; --lamp-soft:#FFA94D26; --on-lamp:#0B0E14;
+  --moon:#DCE3F0; --on-moon:#0B0E14;
+  --late:#FF6B5E; --done:#86B596;
+  --on-course:#FFFFFF;
+  --course-1:#3F74B8; --course-2:#7A5BB5; --course-3:#23866A;
+  --course-4:#B04A7A; --course-5:#6B7F24; --course-6:#2F7F91;
+  --float:0 10px 30px #00000073;
+  --font-display:"Nunito", "SF Pro Rounded", ui-rounded, system-ui, sans-serif;
+  --font-sans:"Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme:dark;
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#14130F; --panel:#1D1B16; --panel-2:#25221B; --panel-3:#2E2A21;
-    --ink:#F2EDE0; --muted:#A79E8A; --faint:#7B7466; --line:#332F25;
-    --gold:#E8B33E; --gold-ink:#F0C86F; --gold-soft:rgba(232,179,62,.16);
-    --red:#E2705C; --red-soft:rgba(226,112,92,.15);
-    --green:#6FBF8E; --green-soft:rgba(111,191,142,.15); --exam:#B99AE6; --exam-soft:rgba(185,154,230,.16);
-    --c1:#7FAAD8; --c2:#A796E0; --c3:#6BC49E; --c4:#D492BA; --c5:#C9A857; --c6:#85AEB8;
-    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.6);
+:root[data-theme="day"]{
+  --ground:#E9ECF1; --ground-raised:#F6F7F9; --ground-hover:#DDE2EA;
+  --rule:#C9D0DB; --rule-strong:#717E92;
+  --ink:#141922; --ink-muted:#4E5868; --ink-faint:#5B6474;
+  --lamp:#9A4D00; --lamp-soft:#9A4D0021; --on-lamp:#FFFFFF;
+  --moon:#243049; --on-moon:#FFFFFF;
+  --late:#B42318; --done:#2F6B45;
+  --float:0 10px 30px #1419222E;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: light){
+  :root[data-theme="system"]{
+    --ground:#E9ECF1; --ground-raised:#F6F7F9; --ground-hover:#DDE2EA;
+    --rule:#C9D0DB; --rule-strong:#717E92;
+    --ink:#141922; --ink-muted:#4E5868; --ink-faint:#5B6474;
+    --lamp:#9A4D00; --lamp-soft:#9A4D0021; --on-lamp:#FFFFFF;
+    --moon:#243049; --on-moon:#FFFFFF;
+    --late:#B42318; --done:#2F6B45;
+    --float:0 10px 30px #1419222E;
+    color-scheme:light;
   }
-}
-:root[data-theme="dark"]{
-  --bg:#14130F; --panel:#1D1B16; --panel-2:#25221B; --panel-3:#2E2A21;
-  --ink:#F2EDE0; --muted:#A79E8A; --faint:#7B7466; --line:#332F25;
-  --gold:#E8B33E; --gold-ink:#F0C86F; --gold-soft:rgba(232,179,62,.16);
-  --red:#E2705C; --red-soft:rgba(226,112,92,.15);
-  --green:#6FBF8E; --green-soft:rgba(111,191,142,.15); --exam:#B99AE6; --exam-soft:rgba(185,154,230,.16);
-  --c1:#7FAAD8; --c2:#A796E0; --c3:#6BC49E; --c4:#D492BA; --c5:#C9A857; --c6:#85AEB8;
-  --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.6);
 }
 
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
-h1,h2,h3,h4{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+html{background:var(--ground)}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font-sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0;text-wrap:balance}
 button,input,select,textarea{font:inherit;color:inherit}
-a{color:var(--gold-ink)}
-:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:4px}
-.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--lamp);outline-offset:2px}
+.hidden{display:none !important}
+.num{font-variant-numeric:tabular-nums}
 
-/* ---------- top bar ---------- */
-.bar{position:sticky;top:0;z-index:40;background:var(--panel);border-bottom:1px solid var(--line)}
-.bar-in{max-width:1180px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
-.brand h1{font-size:20px;font-weight:700}
-.brand .term{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
-.tabs{display:flex;gap:2px;background:var(--panel-2);padding:3px;border-radius:var(--r)}
-.tab{border:0;background:transparent;padding:7px 13px;border-radius:7px;font-size:13.5px;font-weight:500;color:var(--muted);cursor:pointer}
+/* ---------- frame ---------- */
+.bar{position:sticky;top:0;z-index:40;background:linear-gradient(var(--ground) 70%,transparent);-webkit-app-region:drag}
+.bar-in{max-width:1280px;margin:0 auto;padding:28px 56px 16px;display:flex;align-items:center;gap:16px}
+.bar button,.bar a,.bar input{-webkit-app-region:no-drag}
+.is-mac .bar-in{padding-top:40px}
+.tabs{display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--ground-raised);border:1px solid var(--rule);box-shadow:var(--float);max-width:100%;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{appearance:none;border:0;background:none;height:38px;padding:0 16px;border-radius:999px;font-size:15px;font-weight:500;color:var(--ink-muted);cursor:pointer;white-space:nowrap}
 .tab:hover{color:var(--ink)}
-.tab[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1);font-weight:600}
-.icon-btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 11px;font-size:13px;cursor:pointer;color:var(--muted);white-space:nowrap}
-.icon-btn:hover{border-color:var(--gold);color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--ground-hover);color:var(--ink);font-weight:600}
+.bar .grow{flex:1}
+.updated{font-size:13px;line-height:18px;font-weight:500;color:var(--ink-muted);white-space:nowrap}
+.round{width:48px;height:48px;border-radius:999px;border:0;background:var(--ink);color:var(--ground);display:grid;place-items:center;box-shadow:var(--float);cursor:pointer;flex:none}
+.round:disabled{opacity:.6;cursor:default}
+.round.spin svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.round.sm{width:36px;height:36px;box-shadow:none;background:transparent;color:var(--ink);border:1px solid var(--rule-strong);font-size:18px}
+.round.sm:hover{background:var(--ground-hover)}
+.wrap{max-width:1280px;margin:0 auto;padding:16px 56px 96px}
+@media (max-width:760px){
+  .bar-in{padding:16px 16px 12px}
+  .is-mac .bar-in{padding-top:36px}
+  .wrap{padding:8px 16px 96px}
+  .updated{display:none}
+}
 
-/* ---------- layout ---------- */
-.wrap{max-width:1180px;margin:0 auto;padding:22px 18px 80px}
-.cols{display:grid;grid-template-columns:1fr 288px;gap:26px;align-items:start}
-@media (max-width:900px){.cols{grid-template-columns:1fr}.rail{order:-1}}
-.rail{display:flex;flex-direction:column;gap:16px;position:sticky;top:78px}
-@media (max-width:900px){.rail{position:static}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
-.card-h{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
-.card-h h3{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--faint);font-weight:600}
-.card-b{padding:14px 16px}
+/* banners float under the tab bar */
+.ubar{max-width:1280px;margin:0 auto;padding:0 56px 8px;position:relative;z-index:39}
+@media (max-width:760px){.ubar{padding:0 16px 8px}}
+.ubar-in{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:12px 12px 12px 24px;background:var(--ground-raised);border:1px solid var(--rule);border-radius:20px;box-shadow:var(--float);font-size:15px;line-height:22px;color:var(--ink-muted)}
+.ubar .dotpulse{width:8px;height:8px;border-radius:999px;background:var(--ink-muted);flex:none}
+.ubar .utext{flex:1 1 240px}
+.ubar .utext b{color:var(--ink);font-weight:600}
+.ubar .ubtn{height:38px;padding:0 16px;border-radius:999px;border:1px solid var(--lamp);background:var(--lamp);color:var(--on-lamp);font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap}
+.ubar .ubtn:disabled{opacity:.6}
+.ubar .udismiss{height:38px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:var(--ink-muted);cursor:pointer;font-size:14px;font-weight:600}
+.ubar .udismiss:hover{color:var(--ink)}
 
-/* ---------- stat tiles ---------- */
-.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 13px;position:relative;overflow:hidden}
-.tile .n{font-family:var(--mono);font-size:26px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
-.tile .l{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.3}
-.tile.crit{background:var(--red-soft);border-color:transparent}
-.tile.crit .n{color:var(--red)}
-.tile.warn{background:var(--gold-soft);border-color:transparent}
-.tile.warn .n{color:var(--gold)}
+/* ---------- shared pieces ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;border-radius:999px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:var(--ground-hover)}
+.btn.primary{background:var(--lamp);border-color:var(--lamp);color:var(--on-lamp)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.text{border-color:transparent;padding:0 12px;color:var(--ink-muted)}
+.btn.text:hover{color:var(--ink);background:transparent;text-decoration:underline}
+.btn.danger{border-color:transparent;padding:0 12px;color:var(--late)}
+.btn.danger:hover{background:transparent;text-decoration:underline}
+.btn:disabled{opacity:.5;cursor:default}
+.inp{height:38px;background:transparent;border:1px solid var(--rule-strong);border-radius:999px;padding:0 16px;font-size:15px;color:var(--ink)}
+.inp:focus{border-color:var(--lamp);outline:none}
+textarea.inp{height:auto;min-height:96px;border-radius:16px;padding:12px 16px;width:100%;font-size:12px;font-family:ui-monospace,Menlo,monospace;resize:vertical}
+select.inp{padding-right:12px}
+.label{font-size:12px;line-height:16px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-muted);margin:0}
+.h1{font-size:28px;line-height:34px;font-weight:600;margin:0}
+.lede{margin:6px 0 0;font-size:15px;line-height:22px;color:var(--ink-muted);max-width:70ch}
+.msg{margin:8px 0 0;font-size:14px;line-height:20px;color:var(--ink-muted)}
+.course{display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px;font-weight:500;color:var(--ink-muted);white-space:nowrap}
+.course::before{content:"";width:8px;height:8px;border-radius:999px;background:var(--c,var(--ink-muted));flex:none}
+.status{font-size:12px;line-height:16px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-muted);white-space:nowrap}
+.status.late{color:var(--late)} .status.exam{color:var(--moon)} .status.done{color:var(--done)}
+.cap{flex:none;width:44px;height:44px;border-radius:999px;background:var(--c,var(--rule-strong));color:var(--on-course);display:grid;place-items:center}
+.cap svg{width:22px;height:22px}
+.cap.sm{width:36px;height:36px}.cap.sm svg{width:18px;height:18px}
+.cap.xs{width:32px;height:32px}.cap.xs svg{width:16px;height:16px}
+.cap.long{height:88px}
+.cap.exam{background:var(--moon);color:var(--on-moon)}
+.cap.next{box-shadow:0 0 0 3px var(--ground),0 0 0 5px var(--lamp),0 0 0 11px var(--lamp-soft)}
+.cap.faded{opacity:.4}
+.check{appearance:none;width:28px;height:28px;padding:0;border-radius:999px;border:2px solid var(--c,var(--rule-strong));background:transparent;color:var(--on-course);display:grid;place-items:center;cursor:pointer;flex:none}
+.check svg{width:16px;height:16px;opacity:0}
+.check[aria-pressed="true"]{background:var(--c,var(--rule-strong))}
+.check[aria-pressed="true"] svg{opacity:1}
+.check:hover{box-shadow:0 0 0 4px var(--ground-hover)}
+.toggle{position:relative;flex:none;width:44px;height:26px;padding:0;border-radius:999px;border:2px solid var(--rule-strong);background:transparent;cursor:pointer}
+.toggle::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:999px;background:var(--ink-muted);transition:left .15s}
+.toggle[aria-checked="true"]{background:var(--ink);border-color:var(--ink)}
+.toggle[aria-checked="true"]::after{left:20px;background:var(--ground)}
+.seg{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:var(--ground-raised);border:1px solid var(--rule);flex-wrap:wrap}
+.seg button{height:34px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:var(--ink-muted);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}
+.seg button[aria-checked="true"]{background:var(--ground-hover);color:var(--ink);font-weight:600}
+.figure{font-family:var(--font-display);font-weight:800;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
 
 /* ---------- agenda ---------- */
-.bucket{margin-bottom:26px}
-.bucket-h{display:flex;align-items:center;gap:10px;margin-bottom:9px}
-.bucket-h h2{font-size:14px;font-weight:600}
-.bucket-h .cnt{font-family:var(--mono);font-size:11px;color:var(--faint);background:var(--panel-2);padding:1px 7px;border-radius:20px}
-.bucket-h .rule{flex:1;height:1px;background:var(--line)}
-.bucket.is-overdue .bucket-h h2{color:var(--red)}
-.bucket.is-now .bucket-h h2{color:var(--gold)}
-
-.rows{display:flex;flex-direction:column;gap:7px}
-.row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--stripe,var(--line));border-radius:var(--r);padding:11px 14px 11px 12px;transition:border-color .12s,transform .12s}
-.row:hover{border-color:var(--line);border-left-color:var(--stripe,var(--line));transform:translateX(1px)}
-.row.done{opacity:.45}
-.row.done .r-name{text-decoration:line-through}
-.chk{width:18px;height:18px;border:1.5px solid var(--line);border-radius:5px;background:transparent;cursor:pointer;display:grid;place-items:center;padding:0;flex:0 0 auto}
-.chk:hover{border-color:var(--green)}
-.chk[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:#fff}
-.chk svg{width:11px;height:11px;display:none}
-.chk[aria-pressed="true"] svg{display:block}
-.r-main{min-width:0}
-.r-name{font-size:14.5px;font-weight:500;overflow-wrap:anywhere}
-.r-name a{color:inherit;text-decoration:none}
-.r-name a:hover{color:var(--gold-ink);text-decoration:underline}
-.r-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:4px}
-.r-when{text-align:right;flex:0 0 auto}
-.r-when .abs{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
-.r-when .rel{font-family:var(--mono);font-size:11px;color:var(--faint);white-space:nowrap;margin-top:2px}
-.r-when .rel.hot{color:var(--gold);font-weight:600}
-.r-when .rel.late{color:var(--red);font-weight:600}
-
-.pill{font-size:10.5px;font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:var(--panel-2);color:var(--muted);white-space:nowrap}
-.pill.course{background:transparent;border:1px solid currentColor;font-weight:500}
-.pill.pts{background:var(--panel-2);color:var(--muted)}
-.pill.stale{background:var(--gold-soft);color:var(--gold)}
-.pill.miss{background:var(--red-soft);color:var(--red)}
-.pill.todo{background:var(--gold-soft);color:var(--gold)}
-.pill.ok{background:var(--green-soft);color:var(--green)}
-.pill.exam{background:var(--exam-soft);color:var(--exam);font-weight:600}
-.pill.where{background:transparent;border:1px solid var(--exam);color:var(--exam)}
-.rel.past{color:var(--faint)}
-.dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
-
-/* ---------- filters ---------- */
-.filters{display:flex;flex-direction:column;gap:7px}
-.fchip{display:flex;align-items:center;gap:9px;padding:6px 9px;border-radius:8px;border:1px solid transparent;background:transparent;cursor:pointer;text-align:left;width:100%;font-size:13px;color:var(--muted)}
-.fchip:hover{background:var(--panel-2)}
-.fchip[aria-pressed="true"]{color:var(--ink);font-weight:500}
-.fchip[aria-pressed="false"]{opacity:.4}
-.fchip .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fchip .ct{font-family:var(--mono);font-size:11px;color:var(--faint)}
-
-.toggles{display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted)}
-.toggles label{display:flex;align-items:center;gap:8px;cursor:pointer}
-.toggles input{accent-color:var(--gold);width:15px;height:15px}
-
-/* ---------- add todo ---------- */
-.addbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
-.addbar input[type=text]{flex:1;min-width:170px}
-.inp{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:13.5px}
-.inp:focus{border-color:var(--gold);outline:none}
-.btn{background:var(--ink);color:var(--bg);border:0;border-radius:8px;padding:8px 15px;font-size:13.5px;font-weight:600;cursor:pointer}
-.btn:hover{background:var(--gold);color:#fff}
-.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
-.btn.ghost:hover{background:var(--panel-2);color:var(--ink)}
+.agenda{display:grid;grid-template-columns:minmax(0,1fr) 340px;column-gap:72px;align-items:start}
+@media (max-width:1000px){.agenda{grid-template-columns:1fr}.agenda aside{order:-1;margin-bottom:32px}}
+.weekhead{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.weekhead h1{font-size:22px;line-height:28px;font-weight:600}
+.weekhead .yr{font-size:22px;line-height:28px;color:var(--ink-muted)}
+.weekhead .grow{flex:1}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:40px}
+.day{appearance:none;border:0;border-radius:20px;background:transparent;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0 12px;cursor:pointer;color:var(--ink-muted);min-width:0}
+.day:hover{background:var(--ground-hover)}
+.day.today{background:var(--ground-raised);box-shadow:inset 0 0 0 1px var(--rule)}
+.day .dow{font-size:12px;line-height:16px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.day .dn{width:36px;height:36px;border-radius:999px;display:grid;place-items:center;font-family:var(--font-display);font-weight:800;font-size:19px;color:var(--ink);font-variant-numeric:tabular-nums}
+.day.past .dn{color:var(--ink-faint)}
+.day.today .dn{background:var(--ink);color:var(--ground)}
+.dots{display:flex;align-items:center;height:10px}
+.dots i{width:10px;height:10px;border-radius:999px;background:var(--c,var(--rule-strong));box-shadow:0 0 0 2px var(--ground);margin-left:-3px}
+.dots i:first-child{margin-left:0}
+.day.today .dots i{box-shadow:0 0 0 2px var(--ground-raised)}
+.dots i.exam{background:var(--moon)}
+.dots b{font-size:11px;font-weight:600;color:var(--ink-muted);margin-left:4px}
+.tl{position:relative;list-style:none;margin:0;padding:0}
+.tl::before{content:"";position:absolute;left:21px;top:22px;bottom:22px;width:2px;background:var(--rule)}
+.it{position:relative;display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;column-gap:16px;padding:8px 0}
+.it .body{min-width:0}
+.when{font-size:14px;line-height:20px;font-weight:500;color:var(--ink-muted);font-variant-numeric:tabular-nums}
+.it.next .when{color:var(--lamp)} .it.late .when{color:var(--late)}
+.name{display:block;margin-top:2px;font-size:17px;line-height:23px;font-weight:600;color:var(--ink);overflow-wrap:anywhere;text-decoration:none}
+a.name:hover{text-decoration:underline}
+.it.done .name{color:var(--ink-faint);text-decoration:line-through;text-decoration-thickness:1px}
+.it.done .when{color:var(--ink-faint)}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin-top:4px}
+.dh{position:relative;display:flex;align-items:baseline;gap:10px;padding:36px 0 10px 60px}
+.dh:first-child{padding-top:8px}
+.dh::before{content:"";position:absolute;left:16px;bottom:14px;width:12px;height:12px;border-radius:999px;background:var(--ground);border:2px solid var(--rule-strong)}
+.dh b{font-size:16px;line-height:22px;font-weight:600;color:var(--ink)}
+.dh span{font-size:15px;line-height:22px;color:var(--ink-muted)}
+.dh em{margin-left:auto;font-style:normal;font-size:14px;line-height:20px;color:var(--ink-faint)}
+.dh.late b{color:var(--late)}
+.dh.flash b{color:var(--lamp)}
+.fold{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;column-gap:16px;padding:0 0 12px}
+.fold .cap{background:var(--ground-hover);color:var(--done)}
+.minis{display:flex}
+.minis .cap{width:26px;height:26px;margin-left:-8px;box-shadow:0 0 0 2px var(--ground);opacity:.55;background:var(--c)}
+.minis .cap:first-child{margin-left:0}
+.minis .cap svg{width:14px;height:14px}
+.fold-t{font-size:15px;line-height:22px;color:var(--ink-muted)}
+.side h2{margin-bottom:4px}
+.srow{display:grid;grid-template-columns:32px minmax(0,1fr);column-gap:12px;align-items:start;padding:10px 0}
+.srow .t{font-size:15px;line-height:21px;font-weight:600;color:var(--ink);text-decoration:none}
+.srow a.t:hover{text-decoration:underline}
+.srow .s{margin-top:2px;font-size:14px;line-height:20px;color:var(--ink-muted)}
+.extra{margin-top:48px}
+.extra h2{margin-bottom:8px}
+.empty{padding:48px 16px;text-align:center}
+.empty h2{font-family:var(--font-display);font-weight:800;font-size:40px;line-height:1.05;letter-spacing:-.02em}
+.empty p{margin:8px auto 0;max-width:44ch;font-size:15px;line-height:22px;color:var(--ink-muted)}
+.fab{position:fixed;right:32px;bottom:32px;z-index:30}
+.addsheet{position:fixed;right:32px;bottom:96px;z-index:31;width:min(420px,calc(100vw - 32px));padding:20px;border-radius:24px;background:var(--ground-raised);border:1px solid var(--rule);box-shadow:var(--float);display:flex;flex-direction:column;gap:10px}
+.addsheet .row2{display:flex;gap:8px;flex-wrap:wrap}
+.addsheet .row2 .inp{flex:1;min-width:120px}
+@media (max-width:760px){.fab{right:16px;bottom:16px}.addsheet{right:16px;bottom:80px}}
 
 /* ---------- calendar ---------- */
-.cal-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.cal-top h2{font-size:19px;font-weight:600;min-width:180px}
-.grid-scroll{overflow-x:auto}
-.cal{display:grid;grid-template-columns:repeat(7,minmax(112px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.cal .dow{background:var(--panel-2);padding:7px 9px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);text-align:center}
-.day{background:var(--panel);min-height:104px;padding:6px 7px;display:flex;flex-direction:column;gap:3px;cursor:pointer;border:0;text-align:left;font:inherit;color:inherit}
-.day:hover{background:var(--panel-2)}
-.day.out{background:var(--bg);opacity:.5}
-.day.sel{background:var(--gold-soft)}
-.day .dn{font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500}
-.day.today .dn{background:var(--gold);color:#fff;border-radius:50%;width:21px;height:21px;display:grid;place-items:center;font-weight:600}
-.ev{font-size:10.5px;padding:2px 5px;border-radius:4px;background:var(--panel-2);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:2.5px solid var(--stripe)}
-.ev.late{background:var(--red-soft)}
-.more{font-family:var(--mono);font-size:10px;color:var(--faint);padding-left:4px}
-.daydetail{margin-top:16px}
+.calv{display:grid;grid-template-columns:minmax(0,1fr) 300px;column-gap:48px;align-items:start}
+@media (max-width:1000px){.calv{grid-template-columns:1fr}.calv aside{margin-top:32px}}
+.calhead{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.calhead .yr{font-size:28px;line-height:34px;color:var(--ink-muted)}
+.calhead .grow{flex:1}
+.dows,.month{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.dows span{font-size:12px;line-height:16px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-muted);padding:0 8px 8px}
+.cell{appearance:none;display:flex;flex-direction:column;align-items:stretch;gap:4px;min-width:0;height:128px;padding:8px;border:0;border-radius:16px;background:transparent;text-align:left;cursor:pointer;overflow:hidden;color:var(--ink)}
+.cell:hover{background:var(--ground-hover)}
+.cell.sel{background:var(--ground-raised);box-shadow:inset 0 0 0 1px var(--rule-strong)}
+.cell .dn{width:28px;height:28px;border-radius:999px;display:grid;place-items:center;font-family:var(--font-display);font-weight:800;font-size:16px;font-variant-numeric:tabular-nums;flex:none}
+.cell.out .dn{color:var(--ink-faint)}
+.cell.today .dn{background:var(--ink);color:var(--ground)}
+.chip{display:flex;align-items:center;gap:5px;height:22px;padding:0 8px 0 6px;border-radius:999px;background:var(--c,var(--rule-strong));color:var(--on-course);font-size:12px;line-height:16px;font-weight:600;white-space:nowrap;overflow:hidden;min-width:0;flex:none}
+.chip svg{width:12px;height:12px;flex:none}
+.chip span{overflow:hidden;text-overflow:ellipsis}
+.chip.exam{background:var(--moon);color:var(--on-moon)}
+.chip.done{background:transparent;color:var(--ink-faint);box-shadow:inset 0 0 0 1px var(--rule)}
+.chip.next{box-shadow:0 0 0 2px var(--ground),0 0 0 4px var(--lamp)}
+.chip.late{background:transparent;color:var(--late);box-shadow:inset 0 0 0 1px var(--late)}
+.cell .more{font-size:12px;line-height:16px;font-weight:600;color:var(--ink-muted);padding-left:4px}
+.dayside h2{font-size:20px;line-height:26px;font-weight:600}
+.dayside .sub{margin-top:2px;font-size:14px;line-height:20px;color:var(--ink-muted)}
+.dayside .tl{margin-top:16px}
+.dayside .tl::before{display:none}
+@media (max-width:760px){.cell{height:92px;padding:4px}.chip span{display:none}.chip{padding:0 5px}.calhead{flex-wrap:wrap}.calhead .h1,.calhead .yr{font-size:22px;line-height:28px}.weekhead h1,.weekhead .yr{font-size:18px}}
 
 /* ---------- classes ---------- */
-.cls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
-.cls-h{padding:14px 16px;border-bottom:1px solid var(--line);border-top:3px solid var(--stripe);border-radius:var(--r) var(--r) 0 0}
-.cls-h h3{font-size:15.5px;font-weight:600;text-transform:none;letter-spacing:-.01em;color:var(--ink)}
-.cls-h .code{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:3px}
-.cls-b{padding:6px 16px 14px}
-.mini{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
-.mini:last-child{border-bottom:0}
-.mini .mn{min-width:0;overflow-wrap:anywhere}
-.mini .md{font-family:var(--mono);font-size:11px;color:var(--faint);white-space:nowrap}
-.sub{font-size:12.5px;color:var(--muted);padding:8px 0}
+.clsgrid{display:grid;grid-template-columns:56px minmax(0,1.2fr) minmax(0,1.4fr) 140px 110px;column-gap:24px;align-items:center}
+.clshead{padding-bottom:8px;border-bottom:1px solid var(--rule);margin-top:40px}
+.clsrow{padding:20px 0;border-bottom:1px solid var(--rule)}
+.badge{width:56px;height:56px;border-radius:999px;background:var(--c);color:var(--on-course);display:grid;place-items:center;font-family:var(--font-display);font-weight:800;font-size:14px;letter-spacing:.01em}
+.clsrow .nm{font-size:18px;line-height:24px;font-weight:600}
+.clsrow .cd{margin-top:2px;font-size:14px;line-height:20px;color:var(--ink-muted)}
+.nextup{display:flex;gap:12px;align-items:center;min-width:0}
+.nextup .w{font-size:13px;line-height:18px;font-weight:500;color:var(--ink-muted)}
+.nextup .w.lamp{color:var(--lamp)}
+.nextup .n{font-size:15px;line-height:21px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nextup .none{font-size:15px;line-height:21px;color:var(--ink-faint)}
+.wk{font-size:14px;line-height:20px;color:var(--ink-muted)}
+.gradecell{text-align:right;font-size:36px}
+.gradecell.none{color:var(--ink-faint)}
+@media (max-width:900px){
+  .clsgrid{grid-template-columns:56px minmax(0,1fr) auto;row-gap:12px}
+  .clshead{display:none}
+  .clsrow .nextup{grid-column:2 / -1}
+  .clsrow .wk{grid-column:2}
+}
 
 /* ---------- grades ---------- */
-.gr-head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;padding:14px 16px;border-top:3px solid var(--stripe);border-bottom:1px solid var(--line)}
-.gr-head h3{font-size:15.5px;font-weight:600;flex:1;min-width:180px}
-.gr-score{text-align:right}
-.gr-score .pc{font-family:var(--mono);font-size:27px;font-weight:600;line-height:1}
-.gr-score .lt{font-size:11px;color:var(--faint);font-family:var(--mono);letter-spacing:.06em;margin-top:3px}
-table{width:100%;border-collapse:collapse;font-size:13.5px}
-th{text-align:left;font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line)}
-td{padding:6px 10px;border-bottom:1px solid var(--line)}
-tr:last-child td{border-bottom:0}
-td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
-.score-in{width:64px;text-align:right;background:var(--panel-2);border:1px solid transparent;border-radius:6px;padding:3px 7px;font-family:var(--mono);font-size:13px}
-.score-in:focus{border-color:var(--gold);background:var(--panel);outline:none}
-.score-in.filled{background:var(--gold-soft);color:var(--gold-ink);font-weight:600}
-.note{font-size:12px;color:var(--muted);background:var(--panel-2);border-radius:8px;padding:9px 12px;margin:12px 16px 14px;line-height:1.45}
-
-/* ---------- sync ---------- */
-.sync{max-width:720px}
-.step{display:grid;grid-template-columns:26px 1fr;gap:13px;margin-bottom:20px}
-.step .k{font-family:var(--mono);font-size:12px;color:var(--gold);border:1px solid var(--gold);border-radius:50%;width:24px;height:24px;display:grid;place-items:center;font-weight:600}
-.step h4{font-size:14px;font-weight:600;margin-bottom:4px}
-.step p{margin:0 0 9px;font-size:13.5px;color:var(--muted);max-width:62ch}
-.bmk{display:inline-block;background:var(--gold);color:#fff;border-radius:8px;padding:8px 15px;font-weight:600;font-size:13.5px;text-decoration:none;cursor:grab}
-textarea.inp{width:100%;min-height:96px;font-family:var(--mono);font-size:11.5px;resize:vertical}
-.stat{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-family:var(--mono)}
-details.br{border:1px solid var(--line);border-radius:8px;margin-top:9px;background:var(--panel-2)}
-details.br summary{cursor:pointer;padding:8px 12px;font-size:13px;font-weight:500;list-style:none}
-details.br summary::-webkit-details-marker{display:none}
-details.br summary:before{content:'\25B8';display:inline-block;margin-right:8px;color:var(--gold);transition:transform .15s}
-details.br[open] summary:before{transform:rotate(90deg)}
-details.br .bd{padding:2px 12px 12px 12px;font-size:13px;color:var(--muted);line-height:1.55}
-details.br ol{margin:0;padding-left:19px}
-details.br li{margin-bottom:5px}
-details.br kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
-.empty{text-align:center;padding:44px 20px;color:var(--faint)}
-.empty p{margin:6px 0 0;font-size:13.5px}
-.hidden{display:none !important}
-
-/* update banner */
-.ubar{background:var(--gold-soft);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:39}
-.ubar-in{max-width:1180px;margin:0 auto;padding:10px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13.5px}
-.ubar .dotpulse{width:8px;height:8px;border-radius:50%;background:var(--gold);flex:0 0 auto}
-@media (prefers-reduced-motion:no-preference){
-  .ubar .dotpulse{animation:upulse 2.4s ease-in-out infinite}
-  @keyframes upulse{0%,100%{opacity:1}50%{opacity:.35}}
+.grow-btn{width:100%;display:grid;grid-template-columns:130px minmax(0,1fr) 32px;column-gap:24px;align-items:center;padding:18px 0;border:0;border-bottom:1px solid var(--rule);background:transparent;color:var(--ink);text-align:left;cursor:pointer}
+.grow-btn .figure{font-size:46px}
+.grow-btn .figure.none{color:var(--ink-faint)}
+.grow-btn .gn{display:flex;flex-direction:column;gap:10px;min-width:0}
+.grow-btn .gt{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap}
+.grow-btn .gt b{font-size:18px;line-height:24px;font-weight:600}
+.grow-btn .gs{font-size:14px;color:var(--ink-muted)}
+.grow-btn .chev{font-size:18px;color:var(--ink-muted);text-align:center}
+.bar6{display:block;height:6px;border-radius:999px;background:var(--rule);position:relative;overflow:hidden}
+.bar6 i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--c,var(--ink-muted))}
+.bar6.low i{background:var(--late)}
+.gdetail{padding:8px 0 24px 154px}
+.gtable{display:grid;grid-template-columns:minmax(0,1fr) 110px 70px 110px;column-gap:16px;align-items:center}
+.gtable > *{padding:10px 0;border-bottom:1px solid var(--rule)}
+.gtable .h{padding:0 0 8px}
+.gtable .r{text-align:right;color:var(--ink-muted);font-variant-numeric:tabular-nums}
+.wi{justify-self:end;width:84px;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--rule-strong);background:transparent;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+.wi:focus{border-color:var(--lamp);outline:none}
+.wi.filled{border-color:var(--lamp);color:var(--lamp)}
+.gnote{margin:14px 0 0;font-size:14px;line-height:20px;color:var(--ink-muted);max-width:75ch}
+@media (max-width:760px){
+  .grow-btn{grid-template-columns:96px minmax(0,1fr) 24px;column-gap:14px}
+  .grow-btn .figure{font-size:34px}
+  .gdetail{padding-left:0}
+  .gtable{grid-template-columns:minmax(0,1fr) 84px 92px}
+  .gtable .pc{display:none}
 }
-.ubar .utext{flex:1;min-width:180px;color:var(--ink)}
-.ubar .utext b{font-weight:600}
-.ubar a.ubtn,.ubar button.ubtn{background:var(--gold);color:#fff;border:0;border-radius:7px;padding:6px 13px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap}
-.ubar button.udismiss{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:2px 6px}
-.ubar button.udismiss:hover{color:var(--ink)}
-.vstamp{font-family:var(--mono);font-size:11px;color:var(--faint)}
+
+/* ---------- sync & settings ---------- */
+.src{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:32px;align-items:start;padding:24px 0;border-bottom:1px solid var(--rule)}
+.src .ttl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.src .ttl b{font-size:20px;line-height:26px;font-weight:600}
+.src .st{display:inline-flex;align-items:center;gap:6px}
+.src .st i{width:10px;height:10px;border-radius:999px;background:var(--c,var(--ink-muted))}
+.src p{margin:6px 0 0;font-size:15px;line-height:22px;color:var(--ink-muted);max-width:66ch}
+.src .acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.callout{margin:12px 0 0;padding:12px 16px;border-radius:16px;background:var(--ground-raised);border:1px solid var(--rule);font-size:14px;line-height:20px;color:var(--ink-muted);max-width:66ch}
+.callout b{color:var(--ink);font-weight:600}
+.confirm{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px;font-size:14px;color:var(--ink)}
+@media (max-width:760px){.src{grid-template-columns:1fr}.src .acts{justify-content:flex-start;margin-top:12px}}
+.steps{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:16px}
+.steps li{display:grid;grid-template-columns:32px minmax(0,1fr);column-gap:14px}
+.steps .k{width:32px;height:32px;border-radius:999px;border:2px solid var(--rule-strong);display:grid;place-items:center;font-family:var(--font-display);font-weight:800;font-size:15px}
+.steps h4{font-size:16px;line-height:22px;font-weight:600}
+.steps p{margin:4px 0 8px;font-size:14px;line-height:20px;color:var(--ink-muted)}
+details.br{margin-top:8px;border:1px solid var(--rule);border-radius:16px;background:var(--ground-raised)}
+details.br summary{cursor:pointer;padding:10px 16px;font-size:14px;font-weight:600}
+details.br .bd{padding:0 16px 12px;font-size:14px;line-height:20px;color:var(--ink-muted)}
+details.br ol{margin:0;padding-left:18px}
+details.br kbd{font-family:ui-monospace,Menlo,monospace;font-size:12px;border:1px solid var(--rule-strong);border-radius:6px;padding:1px 5px}
+.bmk{display:inline-flex;align-items:center;height:38px;padding:0 16px;border-radius:999px;background:var(--ink);color:var(--ground);font-size:14px;font-weight:600;text-decoration:none;cursor:grab}
+.settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:72px;align-items:start;margin-top:40px}
+.settings > div{display:flex;flex-direction:column;gap:40px}
+@media (max-width:1000px){.settings{grid-template-columns:1fr}.settings > div + div{margin-top:40px}}
+.setrow{display:flex;align-items:center;gap:24px;padding:16px 0;border-bottom:1px solid var(--rule)}
+.setrow .tx{flex:1;min-width:0}
+.setrow .tx b{display:block;font-size:16px;line-height:22px;font-weight:600}
+.setrow .tx span{display:block;margin-top:2px;font-size:14px;line-height:20px;color:var(--ink-muted)}
+.setrow .dotl{display:inline-flex;align-items:center;gap:10px}
+.setrow .dotl i{width:10px;height:10px;border-radius:999px;background:var(--c)}
+
+/* ---------- first launch ---------- */
+.welcome{display:grid;grid-template-columns:minmax(0,1fr) 420px;column-gap:96px;align-items:center;min-height:calc(100vh - 200px);padding:24px 0}
+@media (max-width:1000px){.welcome{grid-template-columns:1fr}.welcome .ex{margin-top:40px}}
+.welcome .title{margin:0;font-family:var(--font-display);font-weight:800;font-size:clamp(56px,9vw,104px);line-height:.95;letter-spacing:-.03em}
+.welcome .tag{margin:16px 0 32px;font-size:20px;line-height:28px;color:var(--ink-muted);max-width:30ch}
+.welcome .go{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:32px}
+.welcome .go .btn{height:48px;padding:0 24px;font-size:16px}
+.welcome .ex{padding:28px;border-radius:28px;background:var(--ground-raised);border:1px solid var(--rule)}
+.welcome .ex .it{grid-template-columns:44px minmax(0,1fr)}
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 </style>
 
-<div class="bar">
+<header class="bar">
   <div class="bar-in">
-    <div class="brand">
-      <h1>Owl Hours</h1>
-      <span class="term">Fall 2026 &middot; Kennesaw State</span>
-    </div>
-    <div class="tabs" role="tablist">
+    <nav class="tabs" role="tablist" aria-label="Screens">
       <button class="tab" role="tab" data-view="agenda" aria-selected="true">Agenda</button>
       <button class="tab" role="tab" data-view="calendar" aria-selected="false">Calendar</button>
       <button class="tab" role="tab" data-view="classes" aria-selected="false">Classes</button>
       <button class="tab" role="tab" data-view="grades" aria-selected="false">Grades</button>
-    </div>
-    <button class="icon-btn" id="btn-refresh" style="display:none">Refresh</button>
-    <button class="icon-btn" data-view="sync">Sync D2L</button>
+      <button class="tab" role="tab" data-view="sync" aria-selected="false">Sync</button>
+      <button class="tab" role="tab" data-view="settings" aria-selected="false">Settings</button>
+    </nav>
+    <span class="grow"></span>
+    <span class="updated" id="updated"></span>
+    <button class="round" id="btn-refresh" style="display:none" aria-label="Refresh from D2L"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
   </div>
-</div>
+</header>
 
 <div id="updatebar" class="ubar hidden"></div>
 
-<div class="wrap">
+<main class="wrap">
+  <div id="v-welcome" class="hidden"></div>
   <div id="v-agenda"></div>
   <div id="v-calendar" class="hidden"></div>
   <div id="v-classes" class="hidden"></div>
   <div id="v-grades" class="hidden"></div>
   <div id="v-sync" class="hidden"></div>
-</div>
+  <div id="v-settings" class="hidden"></div>
+</main>
+<button class="round fab hidden" id="fab" aria-label="Add your own task" aria-expanded="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+<div class="addsheet hidden" id="addsheet" role="dialog" aria-label="Add your own task"></div>
 
 <script>
 (function(){
@@ -348,8 +445,14 @@ var sync     = load(K.sync,{url:"",auto:false});
 var done     = load(K.done,{});
 var todos    = load(K.todos,[]);
 var whatif   = load(K.whatif,{});
-var ui       = load(K.ui,{view:"agenda",hideDone:false,hideStale:false,off:{}});
+var ui       = load(K.ui,{view:"agenda",off:{}});
 if(!ui.off) ui.off={};
+/* Settings that used to be "hide" switches are now "show" switches. */
+if(ui.hideStale){ ui.showStale = false; delete ui.hideStale; }
+if(ui.hideDone){ ui.showDone = false; delete ui.hideDone; }
+if(!ui.theme) ui.theme = "night";
+document.documentElement.setAttribute("data-theme", ui.theme);
+if(/Mac/i.test(navigator.platform||"") && window.owl && window.owl.isDesktop) document.documentElement.classList.add("is-mac");
 
 var TYPE = {a:"assignment", q:"quiz", d:"discussion"};
 var esc = function(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){
@@ -364,11 +467,11 @@ function courseCode(t){
 }
 function courseName(t){
   return t.replace(/\s+Section\s+\w+/,"").replace(/\s+XLS\s+Group(\s+\w+)?/,"")
-          .replace(/\s+Lab\b/," Lab").replace(/\s+CSE\s?\d{4}[A-Z]?/,"").trim();
+          .replace(/\s+Lab\b/," Lab").replace(/\s+CSE\s?\d{4}[A-Z]?/,"").replace(/\s+\d{4}[A-Z]?\s*$/,"").trim();
 }
 var courses = (DATA.courses||[]).map(function(c,i){
   return { id:c.id, raw:c.title, name:courseName(c.title), code:c.code||courseCode(c.title),
-           color:"var(--c"+((i%6)+1)+")", idx:i, grades:c.grades||[], fc:c.fc||null };
+           color:"var(--course-"+((i%6)+1)+")", idx:i, grades:c.grades||[], fc:c.fc||null };
 });
 var byId = {}; courses.forEach(function(c){ byId[c.id]=c; });
 
@@ -397,6 +500,8 @@ var items = [];
       due: due, opens: it.o?new Date(it.o):null,
       url: it.u ? "https://kennesaw.view.usg.edu"+it.u : null,
       status: it.s||null, points: (it.p!=null?it.p:null),
+      /* shown as the done status ("47/50"); never used to decide done */
+      score: (it.e!=null && it.src!=="aleks" && it.e>0) ? it.e : null,
       attempts: it.at, maxAttempts: it.am, section: it.sec||null,
       stale: !!(due && (due.getTime()<TERM_START || due.getTime()>TERM_END)),
       todo:false
@@ -482,7 +587,6 @@ function isDone(it){
 function visible(){
   return allItems().filter(function(it){
     if(it.course && ui.off[it.course]) return false;
-    if(ui.hideDone && isDone(it)) return false;
     return true;
   });
 }
@@ -508,148 +612,298 @@ var BUCKETS = [
   {k:"stale",    label:"Check these dates",   cls:""}
 ];
 
-/* ---------- row rendering ---------- */
-function pill(txt,cls,style){ return '<span class="pill '+(cls||"")+'"'+(style?' style="'+style+'"':"")+'>'+esc(txt)+'</span>'; }
+/* ---------- the pieces every screen shares ---------- */
+/* One icon per kind of work, drawn for Owl Hours on a 24px grid. The capsule's
+   color says which class; the icon says what kind of work it is. */
+var ICON = {
+  quiz:'<path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6l1.5 1.5L8 4.5M3.5 12l1.5 1.5L8 10.5"/><circle cx="5.5" cy="18" r="1.6"/>',
+  assignment:'<path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3v5h5M8.5 13h7M8.5 17h5"/>',
+  discussion:'<path d="M3 5.5A1.5 1.5 0 0 1 4.5 4h9A1.5 1.5 0 0 1 15 5.5v6a1.5 1.5 0 0 1-1.5 1.5H8l-3.5 3v-3A1.5 1.5 0 0 1 3 11.5z"/><path d="M18 8h1.5A1.5 1.5 0 0 1 21 9.5v6a1.5 1.5 0 0 1-1.5 1.5V20L16 17h-4.5A1.5 1.5 0 0 1 10 15.5V15"/>',
+  exam:'<path d="M4 20l1.2-4.4L15.8 5a2 2 0 0 1 2.8 0l.4.4a2 2 0 0 1 0 2.8L8.4 18.8z"/><path d="M13.5 7.3l3.2 3.2M4 20h16"/>',
+  aleks:'<path d="M3 13.5h2.5l3 6.5L14 4h7"/><path d="M15 10.5l5 5M20 10.5l-5 5"/>',
+  gradescope:'<circle cx="12" cy="12" r="8.5"/><path d="M8.2 12.3l2.6 2.6 5-5.3"/>',
+  event:'<rect x="4" y="5.5" width="16" height="15" rx="2"/><path d="M4 10h16M8.5 3v4.5M15.5 3v4.5"/><circle cx="12" cy="15" r="1.3"/>',
+  todo:'<path d="M12 20h8"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'
+};
+function icon(k, w){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'+(w||2.2)+'" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICON[k]||ICON.assignment)+'</svg>';
+}
+var CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
-function rowHTML(it){
-  var c = byId[it.course];
+/* A quiz named like an exam ("COMM 1100 MIDTERM EXAM", "Final Exam") is one,
+   whichever D2L tool it happens to live in. */
+function examLike(it){
+  var n = it.name || "";
+  return !!it.exam || (it.type === "quiz" && /\b(midterm|final exam|exam|test \d+)\b/i.test(n) &&
+                       !/study guide|review|practice|set ?up|scratch/i.test(n));
+}
+function kindOf(it){
+  if(it.todo) return "todo";
+  if(examLike(it)) return "exam";
+  /* older rows carry the source only in their name */
+  if(it.src === "aleks" || /\(ALEKS\)\s*$/.test(it.name||"")) return "aleks";
+  if(it.src === "gs" || /\(Gradescope\)\s*$/.test(it.name||"")) return "gradescope";
+  if(it.event) return "event";
+  if(it.type === "quiz") return "quiz";
+  if(it.type === "discussion") return "discussion";
+  return "assignment";
+}
+function courseColor(it){ var c = byId[it.course]; return c ? c.color : "var(--rule-strong)"; }
+function capHTML(it, o){
+  o = o || {};
+  var k = kindOf(it);
+  var cls = "cap" + (o.size ? " "+o.size : "") + (k === "exam" ? " exam" : "") +
+            (o.next ? " next" : "") + (o.faded ? " faded" : "") + (o.long ? " long" : "");
+  return '<span class="'+cls+'" style="--c:'+courseColor(it)+'">'+icon(k)+'</span>';
+}
+function courseTag(c){ return c ? '<span class="course" style="--c:'+c.color+'">'+esc(c.code)+'</span>' : ''; }
+function statusHTML(pair){ return pair ? '<span class="status '+(pair[0]||"")+'">'+esc(pair[1])+'</span>' : ''; }
+
+function fmtClock(d){ return d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }
+function fmtSpan(it){
+  if(!it.due) return "";
+  if(it.allDay) return "All day";
+  var a = fmtClock(it.due);
+  if(it.event && it.end && it.end > it.due){
+    var b = fmtClock(it.end);
+    var ma = a.match(/\s?([AP]M)$/i), mb = b.match(/\s?([AP]M)$/i);
+    if(ma && mb && ma[1] === mb[1]) a = a.replace(/\s?[AP]M$/i, "");
+    return a + "–" + b;
+  }
+  return a;
+}
+function fmtDay(d, withWeekday){
+  return d.toLocaleDateString(undefined, withWeekday ? {weekday:"short",month:"short",day:"numeric"} : {month:"short",day:"numeric"}) +
+         (d.getFullYear() !== now.getFullYear() ? ", "+d.getFullYear() : "");
+}
+/* time left before the next item: "7h 12m", or "4d 6h" from two days out */
+function countdown(ms){
+  var m = Math.max(0, Math.floor(ms/60000)), d = Math.floor(m/1440), h = Math.floor((m%1440)/60);
+  return d >= 2 ? d+"d "+h+"h" : Math.floor(m/60)+"h "+(m%60)+"m";
+}
+function dayLabel(dayMs){
+  var n = Math.round((dayMs - TODAY)/DAY);
+  if(n < 1) return "";
+  if(n === 7) return "in 1 week";
+  return "in "+n+(n === 1 ? " day" : " days");
+}
+function isOverdue(it){ return !!(it.due && !it.stale && it.due.getTime() < now.getTime() && !isDone(it) && !tookPlace(it)); }
+
+/* The one status word an item gets: whatever changes what you do next. */
+function statusOf(it){
   var complete = isDone(it);
-  var stripe = it.todo ? "var(--gold)" : (c?c.color:"var(--line)");
-  var h = '<div class="row'+(complete?" done":"")+'" style="--stripe:'+stripe+'">';
-  h += '<button class="chk" aria-pressed="'+complete+'" data-check="'+esc(it.key)+'" aria-label="Mark '+esc(it.name)+' done">'+
-       '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 6.2 4.4 9.2 10.5 2.8"/></svg></button>';
-  h += '<div class="r-main"><div class="r-name">'+
-       (it.url?'<a href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.name)+'</a>':esc(it.name))+
-       '</div><div class="r-meta">';
-  if(c) h += '<span class="pill course" style="color:'+c.color+'">'+esc(c.code)+'</span>';
-  h += pill(it.todo?"my task":it.type, it.exam?"exam":"");
-  if(it.exam && it.timed){
-    if(it.mode === "online") h += pill("online","where");
-    else if(it.where) h += pill("in person \u00b7 "+it.where,"where");
-    else if(it.src === "cal") h += pill("likely in person","where");
+  if(examLike(it)){
+    if(tookPlace(it)) return ["", "Took place"];
+    var where = it.mode === "online" ? "Exam · online" : it.where ? "Exam · in person · "+it.where
+              : (it.src === "cal" && it.timed) ? "Exam · likely in person" : "Exam";
+    if(it.src === "ann" && !it.mode) where += " · from announcement";
+    return ["exam", where];
   }
-  /* inferred from an announcement's wording, not a D2L object — say so */
-  if(it.src === "ann") h += pill("from announcement","stale");
-  /* Assignments only: for an ALEKS test the number's meaning isn't confirmed. */
-  if(it.aleksPct != null && it.type === "assignment") h += pill(it.aleksPct+"%","pts");
-  else if(it.points!=null) h += pill(it.points+" pts","pts");
-  if(!complete && it.status && /Not Submitted/i.test(it.status)) h += pill("not submitted","miss");
-  if(it.attempts != null) h += pill(it.maxAttempts ? it.attempts+"/"+it.maxAttempts+" attempts"
-                                                    : it.attempts+(it.attempts===1?" attempt":" attempts"),"pts");
-  if(!complete && it.type === "quiz" && it.attempts > 0) h += pill("attempt started","stale");
-  if(it.stale) h += pill("date looks stale","stale");
-  if(complete && done[it.key] !== 1 && !it.event) h += pill(/closed|completed/i.test(it.status||"") ? "done" : "submitted","ok");
-  h += '</div></div>';
-  h += '<div class="r-when">';
-  if(it.due){
-    var r = relative(it.due);
-    var span = it.allDay ? "all day" : (it.event && it.end && it.end > it.due) ? fmtTime(it.due).replace(/[ap]$/,"")+"\u2013"+fmtTime(it.end) : fmtTime(it.due);
-    if(!it.allDay && it.event && it.end && it.end > it.due && fmtTime(it.due).slice(-1) !== fmtTime(it.end).slice(-1)) span = fmtTime(it.due)+"\u2013"+fmtTime(it.end);
-    h += '<div class="abs mono">'+fmtDate(it.due)+' &middot; '+span+'</div>';
-    if(tookPlace(it)) h += '<div class="rel mono past">took place</div>';
-    else h += '<div class="rel mono '+(it.stale?"":r.c)+'">'+(it.stale?"from a past term":r.t)+'</div>';
-  } else {
-    h += '<div class="rel mono">no date</div>';
+  if(complete){
+    if(it.score != null && it.points) return ["done", (+it.score).toString()+"/"+it.points];
+    if(it.aleksPct != null) return ["done", it.aleksPct+"%"];
+    return ["done", "Done"];
   }
-  h += '</div></div>';
-  if(it.todo) h = h.replace('</div>\n','</div>');
-  return h;
+  if(isOverdue(it)) return ["late", "Overdue"];
+  if(it.aleksPct != null) return ["", it.aleksPct+"% done"];
+  if(it.type === "quiz" && it.attempts > 0) return ["", "Attempt started"];
+  if(it.todo) return ["", "Your task"];
+  return null;
+}
+
+/* The next thing: the soonest unfinished item that hasn't passed. It is the
+   only thing on a screen that gets the lamp. */
+function nextItem(){
+  var t = now.getTime(), best = null;
+  visible().forEach(function(it){
+    if(!it.due || it.stale || isDone(it) || it.due.getTime() < t) return;
+    if(!best || it.due < best.due) best = it;
+  });
+  return best;
+}
+
+/* One row on a timeline: capsule, time, name, class and status, check. */
+function itemRow(it, o){
+  o = o || {};
+  var complete = isDone(it), c = byId[it.course];
+  var next = !!o.next, late = isOverdue(it);
+  var k = kindOf(it);
+  /* tall = most of the work still left, which only ALEKS reports */
+  var long = !complete && k === "aleks" && it.aleksPct != null && it.aleksPct < 50 && !late;
+  var cls = "it" + (next ? " next" : "") + (late ? " late" : "") + (complete ? " done" : "");
+  var when = o.when != null ? o.when : fmtSpan(it);
+  if(next && it.due) when += " · in "+countdown(it.due.getTime() - now.getTime());
+  var name = it.url ? '<a class="name" href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.name)+'</a>'
+                    : '<span class="name">'+esc(it.name)+'</span>';
+  return '<li class="'+cls+'">'+capHTML(it,{next:next, faded:complete, long:long})+
+    '<div class="body"><div class="when">'+esc(when)+'</div>'+name+
+    '<div class="meta">'+courseTag(c)+statusHTML(statusOf(it))+'</div></div>'+
+    '<button class="check" style="--c:'+courseColor(it)+'" aria-pressed="'+complete+'" data-check="'+esc(it.key)+'" aria-label="Mark '+esc(it.name)+(complete?' not done':' done')+'">'+CHECK_SVG+'</button></li>';
 }
 
 /* ---------- agenda ---------- */
-function renderAgenda(){
-  if(isEmpty){
-    document.getElementById("v-agenda").innerHTML =
-      '<div class="empty" style="padding:70px 20px">'+
-      '<h2 style="font-size:22px;margin-bottom:8px">Nothing loaded yet</h2>'+
-      '<p style="max-width:44ch;margin:0 auto 20px">'+
-      (DESKTOP ? 'Sign in to D2L once and Owl Hours keeps itself up to date from then on. '+
-                 'Your coursework stays on this computer.'
-               : 'Owl Hours needs one trip to D2L to pull in your classes. '+
-                 'It takes about five seconds, and your coursework stays on this device.')+'</p>'+
-      '<button class="btn" id="empty-cta">'+(DESKTOP ? 'Sign in to D2L' : 'Get my classes')+'</button>'+
-      '<p class="sub" id="empty-msg" style="margin-top:14px"></p></div>';
-    document.getElementById("empty-cta").onclick = function(){
-      if(DESKTOP){
-        var m = document.getElementById("empty-msg");
-        desktopGrab(true, function(s){ m.textContent = s; });
-      } else { show("sync"); }
-    };
-    if(DESKTOP) window.owl.onStatus(function(s){
-      var m = document.getElementById("empty-msg"); if(m) m.textContent = s;
-    });
-    return;
-  }
-  var vis = visible();
-  var groups = {}; BUCKETS.forEach(function(b){ groups[b.k]=[]; });
-  vis.forEach(function(it){ var b=bucketOf(it); if(groups[b]) groups[b].push(it); });
-  Object.keys(groups).forEach(function(k){
-    groups[k].sort(function(a,b){
-      if(!a.due) return 1; if(!b.due) return -1;
-      return a.due-b.due;
-    });
-  });
-
-  var live = vis.filter(function(i){ return !i.stale && !isDone(i); });
-  var overdue = groups.overdue.filter(function(i){ return !isDone(i); }).length;
-  var wk = live.filter(function(i){ var n=i.due?daysOut(i.due):null; return n!=null && n>=0 && n<=7; }).length;
-  var unsub = vis.filter(function(i){ return i.status && /Not Submitted/i.test(i.status) && !isDone(i); }).length;
-  var staleN = vis.filter(function(i){ return i.stale; }).length;
-
-  var body = '';
-  body += '<div class="addbar">';
-  body += '<input class="inp" type="text" id="td-name" placeholder="Add your own &mdash; readings, study blocks, anything D2L doesn&rsquo;t track">';
-  body += '<select class="inp" id="td-course"><option value="">No class</option>'+
-          courses.map(function(c){ return '<option value="'+c.id+'">'+esc(c.code)+'</option>'; }).join('')+'</select>';
-  body += '<input class="inp" type="date" id="td-due">';
-  body += '<button class="btn" id="td-add">Add</button></div>';
-
-  var any = false;
-  BUCKETS.forEach(function(b){
-    var g = groups[b.k];
-    if(ui.hideStale && b.k==="stale") return;
-    if(!g.length) return;
-    any = true;
-    body += '<section class="bucket '+b.cls+'"><div class="bucket-h"><h2>'+b.label+'</h2>'+
-            '<span class="cnt mono">'+g.length+'</span><span class="rule"></span></div>'+
-            '<div class="rows">'+g.map(rowHTML).join('')+'</div></section>';
-  });
-  if(!any) body += '<div class="empty"><h2>Nothing matches</h2><p>Every class is filtered out, or you&rsquo;ve checked it all off.</p></div>';
-
-  var rail = '';
-  rail += '<div class="tiles">'+
-    tile(wk, wk===1?"due in the next 7 days":"due in the next 7 days", wk>0?"warn":"")+
-    tile(overdue, overdue===1?"overdue item":"overdue items", overdue>0?"crit":"")+
-    tile(unsub,"marked not submitted","")+
-    tile(staleN,"dates to verify","")+
-  '</div>';
-
-  rail += '<div class="card"><div class="card-h"><h3>Classes</h3></div><div class="card-b"><div class="filters">'+
-    courses.map(function(c){
-      var n = allItems().filter(function(i){ return i.course===c.id && !i.stale && !isDone(i); }).length;
-      var on = !ui.off[c.id];
-      return '<button class="fchip" aria-pressed="'+on+'" data-filter="'+c.id+'">'+
-             '<span class="dot" style="background:'+c.color+'"></span>'+
-             '<span class="nm">'+esc(c.name)+'</span><span class="ct mono">'+n+'</span></button>';
-    }).join('')+'</div></div></div>';
-
-  rail += '<div class="card"><div class="card-h"><h3>View</h3></div><div class="card-b"><div class="toggles">'+
-    '<label><input type="checkbox" id="t-done"'+(ui.hideDone?" checked":"")+'> Hide completed</label>'+
-    '<label><input type="checkbox" id="t-stale"'+(ui.hideStale?" checked":"")+'> Hide stale dates</label>'+
-    '</div></div></div>';
-
-  document.getElementById("v-agenda").innerHTML =
-    '<div class="cols"><div>'+body+'</div><aside class="rail">'+rail+'</aside></div>';
-
-  var add = document.getElementById("td-add");
-  if(add) add.onclick = addTodo;
-  var nm = document.getElementById("td-name");
-  if(nm) nm.onkeydown = function(e){ if(e.key==="Enter") addTodo(); };
-  var td=document.getElementById("t-done"); if(td) td.onchange=function(){ ui.hideDone=this.checked; save(K.ui,ui); renderAgenda(); };
-  var ts=document.getElementById("t-stale"); if(ts) ts.onchange=function(){ ui.hideStale=this.checked; save(K.ui,ui); renderAgenda(); };
+var weekOffset = 0, agendaAll = false, foldOpen = false;
+function weekStartOf(t){
+  var d = new Date(t), back = (d.getDay() - (ui.weekStart === 0 ? 0 : 1) + 7) % 7;
+  return sod(new Date(d.getFullYear(), d.getMonth(), d.getDate() - back));
 }
-function tile(n,label,cls){
-  return '<div class="tile '+cls+'"><div class="n">'+n+'</div><div class="l">'+esc(label)+'</div></div>';
+function dayKey(t){ return sod(new Date(t)); }
+
+function renderAgenda(){
+  var el = document.getElementById("v-agenda");
+  var vis = visible();
+  var dated = vis.filter(function(i){ return i.due && !i.stale; });
+  var t = now.getTime();
+  var wk0 = weekStartOf(TODAY);
+  var nx = nextItem();
+
+  /* week strip */
+  var ws = weekStartOf(TODAY + weekOffset*7*DAY);
+  var perDay = {};
+  dated.forEach(function(i){ var k = dayKey(i.due); (perDay[k] = perDay[k] || []).push(i); });
+  var days = '';
+  for(var d=0; d<7; d++){
+    var dd = new Date(ws + d*DAY + 3*36e5), key = sod(dd);
+    var list = (perDay[key]||[]).sort(function(a,b){ return a.due-b.due; });
+    var dots = list.slice(0,4).map(function(i){
+      return examLike(i) ? '<i class="exam"></i>' : '<i style="--c:'+courseColor(i)+'"></i>';
+    }).join('') + (list.length > 4 ? '<b>+'+(list.length-4)+'</b>' : '');
+    days += '<button class="day'+(key===TODAY?" today":"")+(key<TODAY?" past":"")+'" data-jump="'+key+'" aria-label="'+
+            esc(dd.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"}))+', '+list.length+' due">'+
+            '<span class="dow">'+dd.toLocaleDateString(undefined,{weekday:"short"})+'</span>'+
+            '<span class="dn">'+dd.getDate()+'</span><span class="dots">'+dots+'</span></button>';
+  }
+  var we = new Date(ws + 6*DAY + 3*36e5), wsD = new Date(ws + 3*36e5);
+  var range = wsD.getMonth() === we.getMonth()
+    ? wsD.toLocaleDateString(undefined,{month:"short"})+" "+wsD.getDate()+"–"+we.getDate()
+    : fmtDay(wsD)+" – "+fmtDay(we);
+  var h = '<div class="agenda"><div class="main">';
+  h += '<section aria-label="This week"><div class="weekhead"><h1>'+esc(range)+'</h1><span class="yr">'+we.getFullYear()+'</span><span class="grow"></span>'+
+       (weekOffset ? '<button class="btn text" id="wk-now">This week</button>' : '')+
+       '<button class="round sm" id="wk-prev" aria-label="Previous week">‹</button>'+
+       '<button class="round sm" id="wk-next" aria-label="Next week">›</button></div>'+
+       '<div class="week">'+days+'</div></section>';
+
+  /* the timeline */
+  var folded = [], overdue = [], upcoming = [], earlier = [];
+  dated.forEach(function(i){
+    var past = i.due.getTime() < t || tookPlace(i);
+    if(isOverdue(i)){ overdue.push(i); return; }
+    if(isDone(i) || (past && tookPlace(i))){
+      if(!ui.showDone){ if(dayKey(i.due) >= wk0) folded.push(i); return; }
+      if(past){ if(dayKey(i.due) >= wk0) earlier.push(i); return; }
+    }
+    if(past) return;
+    upcoming.push(i);
+  });
+  var byDue = function(a,b){ return a.due-b.due; };
+  overdue.sort(byDue); upcoming.sort(byDue); earlier.sort(byDue);
+  var LIMIT = TODAY + 15*DAY, hiddenLater = 0;
+  if(!agendaAll){
+    hiddenLater = upcoming.filter(function(i){ return i.due.getTime() >= LIMIT; }).length;
+    upcoming = upcoming.filter(function(i){ return i.due.getTime() < LIMIT; });
+  }
+
+  var tl = '';
+  if(folded.length){
+    folded.sort(byDue);
+    tl += '<li class="fold"><span class="cap">'+CHECK_SVG+'</span><div style="display:flex;align-items:center;gap:12px;min-width:0">'+
+          '<span class="minis">'+folded.slice(0,6).map(function(i){ return '<span class="cap" style="--c:'+courseColor(i)+'">'+icon(kindOf(i),2.4)+'</span>'; }).join('')+'</span>'+
+          '<span class="fold-t">'+folded.length+' done this week</span></div>'+
+          '<button class="btn text" id="fold-t" aria-expanded="'+foldOpen+'">'+(foldOpen?"Hide":"Show")+'</button></li>';
+    if(foldOpen) tl += folded.map(function(i){ return itemRow(i,{when:fmtDay(i.due,true)+" · "+fmtSpan(i)}); }).join('');
+  }
+  if(overdue.length){
+    tl += '<li class="dh late"><b>Overdue</b><span>'+overdue.length+' past due</span></li>';
+    tl += overdue.map(function(i){
+      var ago = Math.max(1, Math.round((TODAY - dayKey(i.due))/DAY));
+      return itemRow(i,{when: fmtDay(i.due,true)+" · "+fmtSpan(i)+(dayKey(i.due)===TODAY ? "" : " · "+ago+(ago===1?" day ago":" days ago"))});
+    }).join('');
+  }
+  var groups = [], gi = {};
+  earlier.concat(upcoming).forEach(function(i){
+    var k = dayKey(i.due);
+    if(!(k in gi)){ gi[k] = groups.length; groups.push({k:k, items:[]}); }
+    groups[gi[k]].items.push(i);
+  });
+  groups.forEach(function(g){
+    var dd = new Date(g.k + 3*36e5);
+    var title = g.k === TODAY ? "Today" : g.k === TODAY+DAY ? "Tomorrow" : dd.toLocaleDateString(undefined,{weekday:"long"});
+    var sub = g.k === TODAY || g.k === TODAY+DAY ? dd.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})
+                                               : fmtDay(dd);
+    tl += '<li class="dh" id="dh-'+g.k+'"><b>'+esc(title)+'</b><span>'+esc(sub)+'</span>'+
+          (g.k > TODAY+DAY ? '<em>'+dayLabel(g.k)+'</em>' : '')+'</li>';
+    tl += g.items.map(function(i){ return itemRow(i,{next: nx && i.key === nx.key}); }).join('');
+  });
+
+  if(!tl){
+    h += '<div class="empty"><h2>'+(overdue.length ? "" : "All caught up.")+'</h2><p>Nothing left on your timeline'+
+         (DESKTOP ? '. Owl Hours checks D2L again every 6 hours.' : '.')+'</p></div>';
+  } else {
+    h += '<section aria-label="Timeline"><ol class="tl">'+tl+'</ol></section>';
+    if(hiddenLater) h += '<p style="margin:24px 0 0 60px"><button class="btn" id="tl-more">Show '+hiddenLater+' more after '+esc(fmtDay(new Date(LIMIT)))+'</button></p>';
+  }
+
+  var stale = vis.filter(function(i){ return i.stale; });
+  var undated = vis.filter(function(i){ return !i.due && !i.stale && !isDone(i); });
+  if(ui.showStale !== false && stale.length){
+    h += '<section class="extra"><h2 class="label">Check these dates</h2><p class="msg">D2L dates these outside this term, usually because the class copied last year’s shell. Check the syllabus before trusting them.</p>'+
+         '<ol class="tl" style="margin-top:8px">'+stale.map(function(i){ return itemRow(i,{when:"Dated "+fmtDay(i.due)}); }).join('')+'</ol></section>';
+  }
+  if(ui.showUndated !== false && undated.length){
+    h += '<section class="extra"><h2 class="label">No due date</h2>'+
+         '<ol class="tl" style="margin-top:8px">'+undated.map(function(i){ return itemRow(i,{when:"No due date in D2L"}); }).join('')+'</ol></section>';
+  }
+  h += '</div>';
+
+  /* the exams column */
+  var exams = vis.filter(function(i){ return examLike(i) && i.due && !i.stale && !isDone(i) && !tookPlace(i) && i.due.getTime() >= t; })
+                 .sort(byDue).slice(0,6);
+  h += '<aside class="side"><h2 class="label">Exams</h2>';
+  h += exams.length ? exams.map(function(i){
+    var sub = fmtDay(i.due,true)+" · "+fmtSpan(i)+(i.mode === "online" ? " · online" : i.where ? " · "+i.where : "");
+    var t2 = i.url ? '<a class="t" href="'+esc(i.url)+'" target="_blank" rel="noopener">'+esc(i.name)+'</a>' : '<span class="t">'+esc(i.name)+'</span>';
+    return '<div class="srow">'+capHTML(i,{size:"xs"})+'<div>'+t2+'<div style="margin-top:3px">'+courseTag(byId[i.course])+'</div><div class="s">'+esc(sub)+'</div></div></div>';
+  }).join('') : '<p class="msg">No exams on your calendar yet.</p>';
+  h += '</aside></div>';
+  el.innerHTML = h;
+
+  var q = function(id){ return document.getElementById(id); };
+  q("wk-prev").onclick = function(){ weekOffset--; renderAgenda(); };
+  q("wk-next").onclick = function(){ weekOffset++; renderAgenda(); };
+  if(q("wk-now")) q("wk-now").onclick = function(){ weekOffset = 0; renderAgenda(); };
+  if(q("fold-t")) q("fold-t").onclick = function(){ foldOpen = !foldOpen; renderAgenda(); };
+  if(q("tl-more")) q("tl-more").onclick = function(){ agendaAll = true; renderAgenda(); };
+  Array.prototype.forEach.call(el.querySelectorAll("[data-jump]"), function(b){
+    b.onclick = function(){
+      var k = +this.getAttribute("data-jump"), head = q("dh-"+k);
+      if(head){
+        head.scrollIntoView({behavior:"smooth", block:"center"});
+        head.classList.add("flash"); setTimeout(function(){ head.classList.remove("flash"); }, 1400);
+      } else {
+        var dd = new Date(k + 3*36e5);
+        calM = dd.getMonth(); calY = dd.getFullYear(); calSel = k; show("calendar");
+      }
+    };
+  });
+}
+
+/* your own tasks: the round + button, like Structured's */
+function openAddSheet(open){
+  var sheet = document.getElementById("addsheet"), fab = document.getElementById("fab");
+  if(!open){ sheet.classList.add("hidden"); fab.setAttribute("aria-expanded","false"); return; }
+  sheet.innerHTML =
+    '<h2 class="label">Add your own</h2>'+
+    '<input class="inp" type="text" id="td-name" placeholder="A reading, a study block, anything D2L doesn’t track">'+
+    '<div class="row2"><select class="inp" id="td-course" aria-label="Class"><option value="">No class</option>'+
+    courses.map(function(c){ return '<option value="'+c.id+'">'+esc(c.code)+'</option>'; }).join('')+'</select>'+
+    '<input class="inp" type="date" id="td-due" aria-label="Due date"></div>'+
+    '<div class="row2" style="justify-content:flex-end"><button class="btn text" id="td-cancel">Cancel</button><button class="btn primary" id="td-add">Add</button></div>';
+  sheet.classList.remove("hidden"); fab.setAttribute("aria-expanded","true");
+  document.getElementById("td-name").focus();
+  document.getElementById("td-add").onclick = addTodo;
+  document.getElementById("td-cancel").onclick = function(){ openAddSheet(false); };
+  document.getElementById("td-name").onkeydown = function(e){ if(e.key==="Enter") addTodo(); if(e.key==="Escape") openAddSheet(false); };
 }
 function addTodo(){
   var n = document.getElementById("td-name");
@@ -659,57 +913,55 @@ function addTodo(){
                course:document.getElementById("td-course").value,
                due: d ? new Date(d+"T23:59:00").toISOString() : null });
   save(K.todos,todos);
-  n.value=""; document.getElementById("td-due").value="";
+  openAddSheet(false);
   renderAgenda();
 }
 
 /* ---------- calendar ---------- */
-var calM = now.getMonth(), calY = now.getFullYear(), calSel = null;
+var calM = now.getMonth(), calY = now.getFullYear(), calSel = TODAY;
 function renderCalendar(){
   var vis = visible().filter(function(i){ return i.due && !i.stale; });
   var map = {};
   vis.forEach(function(i){ var k=sod(i.due); (map[k]=map[k]||[]).push(i); });
-
+  var nx = nextItem();
   var first = new Date(calY,calM,1);
-  var start = new Date(calY,calM,1 - first.getDay());
-  var dows = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  var lead = (first.getDay() - (ui.weekStart === 0 ? 0 : 1) + 7) % 7;
+  var start = new Date(calY,calM,1 - lead);
+  var dnames = [];
+  for(var i=0;i<7;i++) dnames.push(new Date(start.getFullYear(),start.getMonth(),start.getDate()+i).toLocaleDateString(undefined,{weekday:"short"}));
+  var rows = Math.ceil((lead + new Date(calY,calM+1,0).getDate())/7);
 
-  var h = '<div class="cal-top">'+
-    '<h2>'+first.toLocaleDateString(undefined,{month:"long",year:"numeric"})+'</h2>'+
-    '<button class="icon-btn" id="c-prev" aria-label="Previous month">&larr;</button>'+
-    '<button class="icon-btn" id="c-today">Today</button>'+
-    '<button class="icon-btn" id="c-next" aria-label="Next month">&rarr;</button></div>';
-
-  h += '<div class="grid-scroll"><div class="cal">'+dows.map(function(d){ return '<div class="dow">'+d+'</div>'; }).join('');
-  for(var w=0; w<6; w++){
-    for(var d=0; d<7; d++){
-      var cur = new Date(start.getFullYear(),start.getMonth(),start.getDate()+w*7+d);
-      var key = sod(cur), evs = map[key]||[];
-      var cls = "day" + (cur.getMonth()!==calM?" out":"") + (key===TODAY?" today":"") + (key===calSel?" sel":"");
-      h += '<button class="'+cls+'" data-day="'+key+'"><span class="dn">'+cur.getDate()+'</span>';
-      evs.slice(0,3).forEach(function(e){
-        var c = byId[e.course];
-        h += '<span class="ev'+(key<TODAY&&!isDone(e)?" late":"")+'" style="--stripe:'+(e.todo?"var(--gold)":(c?c.color:"var(--line)"))+'">'+esc(e.name)+'</span>';
-      });
-      if(evs.length>3) h += '<span class="more mono">+'+(evs.length-3)+' more</span>';
-      h += '</button>';
-    }
+  var h = '<div class="calv"><div>';
+  h += '<div class="calhead"><h1 class="h1">'+first.toLocaleDateString(undefined,{month:"long"})+'</h1><span class="yr">'+calY+'</span><span class="grow"></span>'+
+       '<button class="btn" id="c-today">Today</button>'+
+       '<button class="round sm" id="c-prev" aria-label="Previous month">‹</button>'+
+       '<button class="round sm" id="c-next" aria-label="Next month">›</button></div>';
+  h += '<div class="dows">'+dnames.map(function(d){ return '<span>'+d+'</span>'; }).join('')+'</div><div class="month">';
+  for(var w=0; w<rows*7; w++){
+    var cur = new Date(start.getFullYear(),start.getMonth(),start.getDate()+w);
+    var key = sod(cur), evs = (map[key]||[]).sort(function(a,b){ return a.due-b.due; });
+    var cls = "cell"+(cur.getMonth()!==calM?" out":"")+(key===TODAY?" today":"")+(key===calSel?" sel":"");
+    h += '<button class="'+cls+'" data-day="'+key+'" aria-label="'+esc(cur.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"}))+', '+evs.length+' due">'+
+         '<span class="dn">'+cur.getDate()+'</span>';
+    evs.slice(0, evs.length > 3 ? 2 : 3).forEach(function(e){
+      var st = isDone(e) ? " done" : isOverdue(e) ? " late" : (nx && e.key === nx.key) ? " next" : examLike(e) ? " exam" : "";
+      h += '<span class="chip'+st+'" style="--c:'+courseColor(e)+'">'+icon(kindOf(e),2.6)+'<span>'+esc(e.name)+'</span></span>';
+    });
+    if(evs.length>3) h += '<span class="more">+'+(evs.length-2)+' more</span>';
+    h += '</button>';
   }
   h += '</div></div>';
 
-  if(calSel && map[calSel]){
-    var sd = new Date(calSel);
-    h += '<div class="daydetail"><div class="bucket-h"><h2>'+
-         sd.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})+
-         '</h2><span class="cnt mono">'+map[calSel].length+'</span><span class="rule"></span></div>'+
-         '<div class="rows">'+map[calSel].sort(function(a,b){return a.due-b.due;}).map(rowHTML).join('')+'</div></div>';
-  } else {
-    h += '<p class="sub" style="margin-top:14px">Pick a day to see everything due on it.</p>';
-  }
+  var sd = new Date(calSel + 3*36e5), list = (map[calSel]||[]).sort(function(a,b){ return a.due-b.due; });
+  h += '<aside class="dayside"><h2>'+esc(sd.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}))+'</h2>'+
+       '<div class="sub">'+(calSel===TODAY ? "Today" : calSel < TODAY ? "Past" : dayLabel(calSel).replace(/^in /,"In "))+'</div>';
+  h += list.length ? '<ol class="tl">'+list.map(function(i){ return itemRow(i,{next: nx && i.key === nx.key}); }).join('')+'</ol>'
+                   : '<p class="msg" style="margin-top:16px">Nothing due this day.</p>';
+  h += '</aside></div>';
 
   document.getElementById("v-calendar").innerHTML = h;
-  document.getElementById("c-prev").onclick = function(){ calM--; if(calM<0){calM=11;calY--;} calSel=null; renderCalendar(); };
-  document.getElementById("c-next").onclick = function(){ calM++; if(calM>11){calM=0;calY++;} calSel=null; renderCalendar(); };
+  document.getElementById("c-prev").onclick = function(){ calM--; if(calM<0){calM=11;calY--;} renderCalendar(); };
+  document.getElementById("c-next").onclick = function(){ calM++; if(calM>11){calM=0;calY++;} renderCalendar(); };
   document.getElementById("c-today").onclick = function(){ calM=now.getMonth(); calY=now.getFullYear(); calSel=TODAY; renderCalendar(); };
   Array.prototype.forEach.call(document.querySelectorAll("[data-day]"), function(b){
     b.onclick = function(){ calSel = +this.getAttribute("data-day"); renderCalendar(); };
@@ -718,32 +970,36 @@ function renderCalendar(){
 
 /* ---------- classes ---------- */
 function renderClasses(){
-  var all = allItems();
-  var h = '<div class="cls-grid">';
+  var all = allItems(), nx = nextItem();
+  var wk0 = weekStartOf(TODAY), wk1 = wk0 + 7*DAY;
+  var h = '<h1 class="h1">Classes</h1><p class="lede">'+courses.length+' class'+(courses.length===1?"":"es")+' this term. '+
+          'Grades are D2L’s own where it shows one, otherwise raw points from what’s graded.</p>';
+  h += '<div class="clsgrid clshead"><span></span><h2 class="label">Class</h2><h2 class="label">Next up</h2><h2 class="label">This week</h2><h2 class="label" style="text-align:right">Grade</h2></div>';
   courses.forEach(function(c){
     var mine = all.filter(function(i){ return i.course===c.id; });
-    var live = mine.filter(function(i){ return !i.stale && i.due; }).sort(function(a,b){ return a.due-b.due; });
-    var undated = mine.filter(function(i){ return !i.due && !i.stale; });
-    var stale = mine.filter(function(i){ return i.stale; });
-    h += '<div class="card" style="--stripe:'+c.color+'"><div class="cls-h"><h3>'+esc(c.name)+'</h3>'+
-         '<div class="code mono">'+esc(c.code)+' &middot; ou='+c.id+'</div></div><div class="cls-b">';
-    if(!mine.length){
-      h += '<p class="sub">No assignments, quizzes, or discussions in D2L. This class runs its work somewhere else &mdash; check ALEKS or your syllabus.</p>';
+    var up = mine.filter(function(i){ return i.due && !i.stale && !isDone(i) && i.due.getTime() >= now.getTime(); })
+                 .sort(function(a,b){ return a.due-b.due; })[0];
+    var week = mine.filter(function(i){ return i.due && !i.stale && i.due.getTime() >= wk0 && i.due.getTime() < wk1; });
+    var wdone = week.filter(isDone).length;
+    var stale = mine.filter(function(i){ return i.stale; }).length;
+    var g = gradeOf(c);
+    var nxt;
+    if(up){
+      var lamp = nx && up.key === nx.key;
+      var w = daysOut(up.due) === 0 ? "Today · "+fmtSpan(up) : fmtDay(up.due,true)+" · "+fmtSpan(up);
+      nxt = '<div class="nextup">'+capHTML(up,{size:"sm", next:lamp})+'<div style="min-width:0"><div class="w'+(lamp?" lamp":"")+'">'+esc(w)+'</div>'+
+            '<div class="n">'+esc(up.name)+'</div></div></div>';
     } else {
-      if(live.length){
-        live.slice(0,14).forEach(function(i){
-          var r = relative(i.due);
-          h += '<div class="mini"><span class="mn'+(isDone(i)?'" style="opacity:.45;text-decoration:line-through':'')+'">'+esc(i.name)+'</span>'+
-               '<span class="md" style="'+(r.c==="late"?"color:var(--red)":r.c==="hot"?"color:var(--gold)":"")+'">'+fmtDate(i.due)+'</span></div>';
-        });
-        if(live.length>14) h += '<p class="sub">+ '+(live.length-14)+' more with dates</p>';
-      }
-      if(undated.length) h += '<p class="sub">'+undated.length+' item'+(undated.length>1?"s":"")+' with no due date (discussions, drop boxes).</p>';
-      if(stale.length)   h += '<p class="sub">'+stale.length+' item'+(stale.length>1?"s":"")+' dated outside this term &mdash; verify before trusting.</p>';
+      nxt = '<div class="nextup"><span class="none">'+(mine.length ? "Nothing else dated in D2L" : "No work in D2L. Check ALEKS, Gradescope or the syllabus.")+'</span></div>';
     }
-    h += '</div></div>';
+    var dept = (c.code.split(" ")[0]||"").slice(0,4);
+    h += '<div class="clsgrid clsrow"><span class="badge" style="--c:'+c.color+'">'+esc(dept)+'</span>'+
+         '<div style="min-width:0"><div class="nm">'+esc(c.name)+'</div><div class="cd">'+esc(c.code)+'</div>'+
+         (stale ? '<div style="margin-top:4px">'+statusHTML(["late","Check dates: "+stale+" from another term"])+'</div>' : '')+'</div>'+
+         nxt+
+         '<div class="wk">'+(week.length ? wdone+" of "+week.length+" done" : "Nothing due")+'</div>'+
+         '<div class="figure gradecell'+(g.pct==null?" none":"")+'">'+(g.pct==null ? "—" : g.pct.toFixed(1))+'</div></div>';
   });
-  h += '</div>';
   document.getElementById("v-classes").innerHTML = h;
 }
 
@@ -754,64 +1010,77 @@ function scorable(g){ return g.p!=null && g.p>0 && !SKIP.test(g.n) && !SKIP2.tes
 function letter(p){
   if(p>=90) return "A"; if(p>=80) return "B"; if(p>=70) return "C"; if(p>=60) return "D"; return "F";
 }
+/* One place that turns a class's gradebook into a number, for Grades and
+   Classes alike. D2L's own grade wins whenever it shows one: it knows the
+   syllabus weights, raw points don't. */
+function gradeOf(c){
+  var rows = c.grades.filter(scorable);
+  /* D2L pre-fills work that hasn't been graded yet as 0, and nothing in these
+     pages distinguishes that from an actual zero. Counting them would report
+     an F for a course that simply hasn't started marking, so a bare 0 is left
+     out; a what-if you typed always counts, zero included. */
+  var earned=0, poss=0, entered=0, real=0, zeros=0;
+  rows.forEach(function(g){
+    var v = whatif[c.id+"|"+g.n];
+    var typed = (v!=null && v!=="");
+    var n = typed ? parseFloat(v) : (g.e!=null ? g.e : null);
+    if(n==null || isNaN(n)) return;
+    if(!typed && n === 0){ zeros++; return; }
+    earned += n; poss += g.p; entered++;
+    if(!typed) real++;
+  });
+  var raw = poss>0 ? earned/poss*100 : null;
+  var fc = c.fc && c.fc.p ? c.fc.e/c.fc.p*100 : null;
+  var whatIfs = entered - real;
+  /* a what-if only moves the raw figure, so show that one while any are typed */
+  var useD2L = fc != null && !whatIfs;
+  return { pct: useD2L ? fc : raw, d2l: useD2L, fcLetter: c.fc && c.fc.g, rows: rows,
+           entered: entered, whatIfs: whatIfs, zeros: zeros, raw: raw };
+}
+var gradeOpen = {};
 function renderGrades(){
-  var h = '';
+  var h = '<h1 class="h1">Grades</h1><p class="lede">D2L’s own grade where it shows one; otherwise raw points from everything graded so far. Click a class to see its items and try what-if scores.</p><div style="margin-top:24px">';
   courses.forEach(function(c){
-    var rows = c.grades.filter(scorable);
-    /* Real scores come from D2L. A what-if entry, when present, replaces one so
-       you can see where a hypothetical result would land you. */
-    /* D2L pre-fills work that hasn't been graded yet as 0, and nothing in these
-       pages distinguishes that from an actual zero. Counting them would report
-       an F for a course that simply hasn't started marking, so a bare 0 is left
-       out; a what-if you typed always counts, zero included. */
-    var earned=0, poss=0, entered=0, real=0, zeros=0;
-    rows.forEach(function(g){
-      var k = c.id+"|"+g.n;
-      var v = whatif[k];
-      var typed = (v!=null && v!=="");
-      var n = typed ? parseFloat(v) : (g.e!=null ? g.e : null);
-      if(n==null || isNaN(n)) return;
-      if(!typed && n === 0){ zeros++; return; }
-      earned += n; poss += g.p; entered++;
-      if(!typed) real++;
-    });
-    var pct = poss>0 ? (earned/poss*100) : null;
-    h += '<div class="card" style="--stripe:'+c.color+';margin-bottom:18px">';
-    var fc = c.fc;
-    var fcPct = fc && fc.p ? (fc.e/fc.p*100) : null;
-    h += '<div class="gr-head"><h3>'+esc(c.name)+'</h3>';
-    if(fc){
-      h += '<div class="gr-score"><div class="pc" style="color:'+c.color+'">'+fcPct.toFixed(1)+'%</div>'+
-           '<div class="lt">D2L&rsquo;S GRADE'+(fc.g?" &middot; "+esc(fc.g):"")+'</div></div>';
-    }
-    h += '<div class="gr-score">'+
-         '<div class="pc" style="color:'+(pct==null?"var(--faint)":"var(--muted)")+'">'+(pct==null?"&mdash;":pct.toFixed(1)+"%")+'</div>'+
-         '<div class="lt">'+(pct==null?"NOTHING GRADED YET"
-            : (entered-real>0 ? "WITH YOUR WHAT-IFS" : "FROM "+entered+" GRADED")+" &middot; "+letter(pct))+'</div></div></div>';
-    if(!rows.length){
-      h += '<p class="note">No point-bearing grade items in D2L for this class yet.</p>';
+    var g = gradeOf(c), open = !!gradeOpen[c.id];
+    var sub = g.pct == null ? "Nothing graded yet"
+            : g.d2l ? "D2L’s grade"+(g.fcLetter ? " · "+g.fcLetter : "")
+            : (g.whatIfs ? "With your what-ifs" : "Raw points from "+g.entered+" graded")+" · "+letter(g.pct);
+    var low = g.pct != null && g.pct < 70;
+    h += '<button class="grow-btn" aria-expanded="'+open+'" data-gopen="'+c.id+'">'+
+         '<span class="figure'+(g.pct==null?" none":"")+'">'+(g.pct==null ? "—" : g.pct.toFixed(1))+'</span>'+
+         '<span class="gn"><span class="gt"><b>'+esc(c.name)+'</b>'+courseTag(c)+'<span class="gs">'+esc(sub)+'</span>'+
+         (low ? statusHTML(["late","Below 70"]) : '')+'</span>'+
+         '<span class="bar6'+(low?" low":"")+'" style="--c:'+c.color+'"><i style="width:'+Math.max(0,Math.min(100,g.pct||0))+'%"></i></span></span>'+
+         '<span class="chev" aria-hidden="true">'+(open ? "⌃" : "⌄")+'</span></button>';
+    if(!open) return;
+    h += '<div class="gdetail">';
+    if(!g.rows.length){
+      h += '<p class="msg">No point-bearing grade items in D2L for this class yet.</p>';
     } else {
-      h += '<div class="grid-scroll"><table><thead><tr><th>Grade item</th><th style="text-align:right">Score</th><th style="text-align:right">%</th><th style="text-align:right">What if&hellip;</th></tr></thead><tbody>';
-      rows.forEach(function(g){
-        var k = c.id+"|"+g.n;
-        var v = whatif[k]==null?"":whatif[k];
-        var actual = g.e!=null ? g.e : null;
+      h += '<div class="gtable"><span class="label h">Grade item</span><span class="label h r">Score</span><span class="label h r pc">%</span><span class="label h r">What if</span>';
+      g.rows.forEach(function(it){
+        var k = c.id+"|"+it.n;
+        var v = whatif[k]==null ? "" : whatif[k];
+        /* a bare 0 is usually "not marked yet" (see gradeOf), so it reads as blank */
+        var actual = it.e!=null && it.e!==0 ? it.e : null;
         var shown = v!=="" ? v : (actual!=null ? String(actual) : "");
-        var pctCell = actual!=null && g.p ? (actual/g.p*100).toFixed(0)+"%" : "&mdash;";
-        h += '<tr><td>'+esc(g.n)+'</td>'+
-             '<td class="num">'+(actual!=null?esc(String(actual)):"&mdash;")+' / '+g.p+'</td>'+
-             '<td class="num">'+pctCell+'</td>'+
-             '<td class="num"><input class="score-in'+(v!==""?" filled":"")+'" inputmode="decimal" value="'+esc(shown)+'" data-wi="'+esc(k)+'" aria-label="What-if score for '+esc(g.n)+'"></td></tr>';
+        h += '<span>'+esc(it.n)+'</span>'+
+             '<span class="r">'+(actual!=null ? esc(String(actual)) : "—")+' / '+it.p+'</span>'+
+             '<span class="r pc">'+(actual!=null && it.p ? (actual/it.p*100).toFixed(0)+"%" : "—")+'</span>'+
+             '<input class="wi'+(v!==""?" filled":"")+'" inputmode="decimal" value="'+esc(shown)+'" data-wi="'+esc(k)+'" aria-label="What-if score for '+esc(it.n)+'">';
       });
-      h += '</tbody></table></div>';
-      h += '<p class="note">'+(fc ? '<strong>D2L&rsquo;s grade is the real one.</strong> ' : '')+
-           'The second figure totals raw points across everything scored. D2L doesn&rsquo;t expose category weights through these pages, so where your syllabus weights categories the two will differ &mdash; trust D2L&rsquo;s. '+
-           'Type over any score to see where a different result would put you.</p>'+
-           (zeros ? '<p class="note" style="margin-top:0">'+zeros+' item'+(zeros>1?'s show':' shows')+' as 0 in D2L. Nothing here can tell a real zero from work that just hasn&rsquo;t been marked, so '+(zeros>1?'they are':'it is')+' left out of the figure above rather than counted as failure. Type a score in if you know it.</p>' : '');
+      h += '</div>';
+      h += '<p class="gnote">Type a score to see where it would put you. '+(c.fc ? 'D2L’s own grade is the real one; what-ifs move the raw points figure. ' : '')+
+           'D2L doesn’t share category weights through these pages, so where your syllabus weights categories the raw figure will differ.'+
+           (g.zeros ? ' '+g.zeros+' item'+(g.zeros>1?'s show':' shows')+' as 0 in D2L and '+(g.zeros>1?'are':'is')+' left out, since nothing here can tell a real zero from work that isn’t marked yet.' : '')+'</p>';
     }
     h += '</div>';
   });
+  h += '</div>';
   document.getElementById("v-grades").innerHTML = h;
+  Array.prototype.forEach.call(document.querySelectorAll("[data-gopen]"), function(b){
+    b.onclick = function(){ var id = this.getAttribute("data-gopen"); gradeOpen[id] = !gradeOpen[id]; renderGrades(); };
+  });
   Array.prototype.forEach.call(document.querySelectorAll("[data-wi]"), function(inp){
     inp.oninput = function(){
       whatif[this.getAttribute("data-wi")] = this.value;
@@ -957,163 +1226,338 @@ var SCRAPER = "javascript:(function(){var M={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5
 "})}).catch(function(e){alert('Owl Hours: '+e)})})})();";
 /* end SCRAPER */
 
+/* ---------- sync ---------- */
+function ago(ms){
+  if(!ms) return null;
+  var d = new Date(ms);
+  if(sod(d) === TODAY) return "today at "+fmtClock(d);
+  if(sod(d) === TODAY-DAY) return "yesterday at "+fmtClock(d);
+  return fmtDay(d,true);
+}
+function source(o){
+  return '<section class="src" id="src-'+o.id+'"><div style="min-width:0">'+
+    '<div class="ttl"><b>'+esc(o.title)+'</b><span class="st" style="--c:'+o.color+'"><i></i><span class="status" style="color:'+o.color+'">'+esc(o.state)+'</span></span></div>'+
+    o.lines.map(function(l){ return '<p>'+l+'</p>'; }).join('')+(o.extra||'')+
+    '<p class="msg" id="'+o.id+'-msg"></p><div id="'+o.id+'-confirm"></div></div>'+
+    '<div class="acts">'+o.actions+'</div></section>';
+}
+/* Disconnecting asks once, in the page: say what goes, then do it. */
+function confirmIn(id, text, yes, run){
+  var box = document.getElementById(id+"-confirm");
+  box.innerHTML = '<div class="confirm"><span>'+text+'</span><button class="btn danger" id="'+id+'-yes">'+esc(yes)+'</button><button class="btn text" id="'+id+'-no">Cancel</button></div>';
+  document.getElementById(id+"-no").onclick = function(){ box.innerHTML = ""; };
+  document.getElementById(id+"-yes").onclick = run;
+}
+function dropSource(src){
+  var next = JSON.parse(JSON.stringify(DATA)), n = 0;
+  (next.courses||[]).forEach(function(c){
+    var before = (c.items||[]).length;
+    c.items = (c.items||[]).filter(function(i){ return i.src !== src && !(src === "aleks" && isLegacyAleks(i)); });
+    n += before - c.items.length;
+  });
+  save(K.data, next);
+  return n;
+}
 function renderSync(){
-  var when = DATA.scrapedAt ? new Date(DATA.scrapedAt) : null;
-  var h = '<div class="sync">';
-  h += '<div class="card"><div class="card-h"><h3>Where your data comes from</h3></div><div class="card-b">';
-  var state = isCustom ? "Your own D2L pull" : (isEmpty ? "No classes loaded yet" : "Built-in snapshot");
-  h += '<p class="stat"><span class="dot" style="background:'+(isEmpty?"var(--red)":isCustom?"var(--green)":"var(--gold)")+'"></span>'+
-       state + (when && !isEmpty ? " &middot; "+when.toLocaleString() : "")+'</p>';
-  h += '<p class="vstamp">Owl Hours '+esc(APP_VERSION)+' &middot; '+(DESKTOP?(PERSONAL?"personal desktop build":"desktop app"):"web app")+
-       (DESKTOP?" &middot; <a href=\"https://github.com/'+REPO+'/releases\" target=\"_blank\" rel=\"noopener\">releases</a>":"")+'</p>';
-  h += '<p class="sub">Owl Hours can&rsquo;t reach D2L on its own &mdash; it&rsquo;s a sandboxed page and has no access to your login. You bring the data over with the button below. It stays in this browser, on this device: nobody else who opens this link can see it.</p>';
-  h += '<p class="sub" id="safari-warn" style="display:none"><strong>Heads up, Safari:</strong> Safari deletes a site&rsquo;s saved data after 7 days without a visit. If you don&rsquo;t open Owl Hours for a week, your classes and checkmarks will be gone and you&rsquo;ll need to run the grabber again. Opening it every few days is enough to keep it. Chrome and Firefox don&rsquo;t do this.</p>';
-  h += '</div></div>';
-
+  var h = '<h1 class="h1">Sync</h1><p class="lede">Where Owl Hours gets your work, and when it last looked. '+
+          'Disconnecting a source removes its work from Owl Hours and stops it being read.</p><div style="margin-top:16px">';
+  var ON = "var(--done)", OFF = "var(--ink-muted)";
   if(DESKTOP){
-    var gsAge = (function(){
-      var st = load(K.gs,{});
-      if(!st.lastPull) return "Not pulled yet.";
-      var days = Math.floor((Date.now()-st.lastPull)/86400000);
-      return days < 1 ? "Last read today." : "Last read "+days+" day"+(days===1?"":"s")+" ago.";
-    })();
-    h += '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Classes that use Gradescope</h3></div><div class="card-b">';
-    h += '<p class="sub" style="padding-top:0">Some classes post their real work in Gradescope and leave D2L nearly empty. '+
-         'Gradescope has no one-session rule, so this refreshes automatically along with D2L &mdash; you only need the button for a first sign-in.</p>';
-    h += '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="g-pull">Pull my Gradescope work</button></div>';
-    h += '<p class="vstamp" style="margin-top:9px">'+esc(gsAge)+'</p>';
-    h += '<p class="sub" id="g-msg"></p></div></div>';
-
-    h += '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Classes that use ALEKS</h3></div><div class="card-b">';
-    h += '<p class="sub" style="padding-top:0">D2L can&rsquo;t see ALEKS, so a class that runs its work there &mdash; Precalculus, Chemistry &mdash; looks empty. '+
-         'This reads your ALEKS assignments and folds them in, and they survive every later D2L refresh.</p>';
-    h += '<p class="sub"><strong>It signs you out of ALEKS everywhere else.</strong> ALEKS only allows one session at a time, which is why this is a button and not automatic &mdash; '+
-         'a background check would kick you out mid-homework. Don&rsquo;t press it while you&rsquo;re working in ALEKS.</p>';
-    h += '<button class="btn" id="a-pull">Pull my ALEKS work</button>';
-    h += '<p class="vstamp" style="margin-top:9px">'+esc(alekpAgeText())+' Refresh will offer this again once it&rsquo;s three days old.</p>';
-    h += '<p class="sub" id="a-msg"></p></div></div>';
-
-    h += '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Your D2L sign-in</h3></div><div class="card-b">';
-    h += '<p class="sub" style="padding-top:0">This app keeps its own D2L session, so you sign in once and it refreshes itself '+
-         'from then on &mdash; on launch and every few hours. No bookmarklet needed here.</p>';
-    h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">'+
-         '<button class="btn" id="d-refresh">Refresh from D2L</button>'+
-         '<button class="btn ghost" id="d-signout">Forget my D2L sign-in</button></div>';
-    h += '<p class="sub" id="d-msg"></p></div></div>';
+    var d2lAt = DATA.scrapedAt ? Date.parse(DATA.scrapedAt) : null;
+    h += source({id:"d2l", title:"D2L", color: isEmpty ? OFF : ON, state: isEmpty ? "Not connected" : "Connected",
+      lines:["Assignments, quizzes, discussions, grades and announcements for "+(courses.length ? "all "+courses.length+" classes" : "your classes")+".",
+             d2lAt ? "Last refreshed "+esc(ago(d2lAt))+". Owl Hours checks again every 6 hours." : "Not read yet."],
+      actions: isEmpty ? '<button class="btn primary" id="d-refresh">Sign in to D2L</button>'
+                       : '<button class="btn" id="d-refresh">Refresh now</button><button class="btn text" id="d-off">Disconnect</button>'});
+    var al = alekpState(), aleksCourses = courses.filter(function(c){
+      return allItems().some(function(i){ return i.course === c.id && i.src === "aleks"; });
+    }).map(function(c){ return c.code; });
+    h += source({id:"aleks", title:"ALEKS", color: ui.aleksOff ? OFF : al.lastPull ? ON : OFF,
+      state: ui.aleksOff ? "Disconnected" : "Pull by hand",
+      lines:["D2L can’t see ALEKS, so pull it after you work on a module.",
+             (aleksCourses.length ? "Used by "+esc(aleksCourses.join(", "))+". " : "")+esc(alekpAgeText())],
+      extra:'<p class="callout"><b>It signs you out of ALEKS everywhere else.</b> ALEKS allows one session at a time, so this only runs when you press it. Finish what you’re doing in ALEKS first.</p>',
+      actions:'<button class="btn" id="a-pull">Pull my ALEKS work</button>'+(ui.aleksOff ? '' : '<button class="btn text" id="a-off">Disconnect</button>')});
+    var gs = load(K.gs,{});
+    h += source({id:"gs", title:"Gradescope", color: ui.gsOff ? OFF : ON, state: ui.gsOff ? "Disconnected" : "Reading",
+      lines:["Scores for classes that grade in Gradescope instead of D2L.",
+             ui.gsOff ? "Turned off. Owl Hours won’t read it until you connect it again."
+                      : "Read automatically with every refresh. "+(gs.lastPull ? "Last read "+esc(ago(gs.lastPull))+"." : "Not read yet.")],
+      actions: ui.gsOff ? '<button class="btn" id="g-pull">Connect</button>'
+                        : '<button class="btn" id="g-pull">Read now</button><button class="btn text" id="g-off">Disconnect</button>'});
+    h += source({id:"cal", title:"D2L calendar", color: ui.calOff ? OFF : ON, state: ui.calOff ? "Off" : "Reading",
+      lines:["Sit-down exams and events that only exist on your course calendars.",
+             ui.calOff ? "Turned off. Exams that live only on the calendar won’t show up." : "Read automatically with every refresh."],
+      actions: ui.calOff ? '<button class="btn" id="c-pull">Turn on</button>'
+                         : '<button class="btn" id="c-pull">Read now</button><button class="btn text" id="c-off">Turn off</button>'});
+  } else {
+    var when = DATA.scrapedAt ? Date.parse(DATA.scrapedAt) : null;
+    h += '<section class="src"><div style="min-width:0"><div class="ttl"><b>Load your own classes</b>'+
+         '<span class="st" style="--c:'+(isEmpty ? OFF : ON)+'"><i></i><span class="status" style="color:'+(isEmpty ? OFF : ON)+'">'+(isEmpty ? "Nothing loaded" : "Loaded")+'</span></span></div>'+
+         '<p>'+(when && !isEmpty ? "Last loaded "+esc(ago(when))+". " : "")+'This page can’t reach D2L on its own, so a bookmark does it for you. Your classes stay in this browser, on this device.</p>'+
+         '<p class="callout" id="safari-warn" style="display:none"><b>Safari deletes a site’s data after 7 days without a visit.</b> Open Owl Hours every few days to keep your classes and checkmarks. Chrome and Firefox don’t do this.</p>'+
+         '<ol class="steps">'+
+         '<li><span class="k">1</span><div><h4>Save the grabber</h4><p>In Chrome, Edge or Firefox, drag this button onto your bookmarks bar. Safari needs the steps below.</p>'+
+         '<a class="bmk" id="bmk" href="#">Grab my D2L</a> <button class="btn" id="copy-code">Copy the code</button>'+
+         '<details class="br"><summary>Safari: do it this way</summary><div class="bd"><ol>'+
+         '<li>Press <b>Copy the code</b> above.</li>'+
+         '<li>Show the Favorites bar: <b>View → Show Favorites Bar</b> (<kbd>⇧⌘B</kbd>).</li>'+
+         '<li>Go to any page and press <kbd>⌘D</kbd>. Save it to <b>Favorites</b> and name it <b>Grab my D2L</b>.</li>'+
+         '<li>Open <b>Bookmarks → Edit Bookmarks</b> (<kbd>⌥⌘B</kbd>), right-click that bookmark and choose <b>Edit Address</b>.</li>'+
+         '<li>Paste the copied code over the whole address and press Return.</li>'+
+         '<li>Turn on <b>Settings → Advanced → Show features for web developers</b>, then <b>Developer → Allow JavaScript from Smart Search field</b>.</li></ol>'+
+         '<p style="margin:8px 0 0">Run it by clicking the bookmark on the Favorites bar itself. Picking it from the address bar’s dropdown makes Safari refuse it.</p></div></details>'+
+         '<details class="br"><summary>Firefox</summary><div class="bd">Dragging works. If the bookmarks bar is hidden, press <kbd>⇧⌘B</kbd> (<kbd>Ctrl+Shift+B</kbd> on Windows) first.</div></details></div></li>'+
+         '<li><span class="k">2</span><div><h4>Run it on D2L</h4><p>Sign in at kennesaw.view.usg.edu, then click the bookmark. After a few seconds it shows your classes with a Copy button.</p></div></li>'+
+         '<li><span class="k">3</span><div><h4>Paste it here</h4><textarea class="inp" id="paste" placeholder="Paste what the grabber copied"></textarea>'+
+         '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn primary" id="load">Load my classes</button><button class="btn text" id="reset">Clear what’s loaded</button></div>'+
+         '<p class="msg" id="msg"></p></div></li></ol></div><div></div></section>';
   }
-  h += '<div class="card" style="margin-top:16px"><div class="card-h"><h3>'+(DESKTOP?'Grabber (for a plain browser)':'Load your own classes')+'</h3></div><div class="card-b">';
-  h += '<div class="step"><span class="k">1</span><div><h4>Save the grabber</h4>'+
-       '<p>In Chrome, Edge, or Firefox: drag this button onto your bookmarks bar. In Safari, dragging won&rsquo;t work &mdash; follow the Safari steps below instead.</p>'+
-       '<a class="bmk" id="bmk" href="#">Grab my D2L</a> <button class="btn ghost" id="copy-code">Copy the code</button>'+
-       '<details class="br"><summary>Safari &mdash; do it this way</summary><div class="bd"><ol>'+
-       '<li>Hit <b>Copy the code</b> above.</li>'+
-       '<li>Show the Favorites bar: <b>View &rarr; Show Favorites Bar</b> (<kbd>&#8679;&#8984;B</kbd>).</li>'+
-       '<li>Go to any page and press <kbd>&#8984;D</kbd> to bookmark it. Save it to <b>Favorites</b> and name it <b>Grab my D2L</b>.</li>'+
-       '<li>Open <b>Bookmarks &rarr; Edit Bookmarks</b> (<kbd>&#8997;&#8984;B</kbd>), find that bookmark, right-click it and choose <b>Edit Address</b>.</li>'+
-       '<li>Select the whole address, paste the copied code over it, and press Return.</li>'+
-       '<li>Now turn on the permission Safari needs: <b>Settings &rarr; Advanced &rarr; Show features for web developers</b>, then the new <b>Developer</b> tab &rarr; <b>Allow JavaScript from Smart Search field</b>.</li>'+
-       '</ol>'+
-       '<p style="margin:9px 0 0"><b>Click the button on the Favorites Bar itself</b> when you run it. If you type its name into the address bar and pick it from the dropdown, Safari refuses with &ldquo;Safari doesn&rsquo;t allow JavaScript from the Smart Search field&rdquo; &mdash; that message means your bookmark is fine, it was just started from the wrong place.</p>'+
-       '<p style="margin:9px 0 0">Pasting the code straight into the address bar never works either, which is why it has to go in through the bookmark editor. On iPhone or iPad, set this up on a Mac first &mdash; iCloud syncs the bookmark over, where it runs from the Favorites list.</p></div></details>'+
-       '<details class="br"><summary>Firefox</summary><div class="bd">Dragging works, but if the bookmarks bar is hidden press <kbd>&#8679;&#8984;B</kbd> (<kbd>Ctrl+Shift+B</kbd> on Windows) first. You can also right-click the bar &rarr; <b>Add Bookmark</b> and paste the code into the URL field.</div></details>'+
-       '</div></div>';
-  h += '<div class="step"><span class="k">2</span><div><h4>Run it on D2L</h4>'+
-       '<p>Sign in at <span class="mono">kennesaw.view.usg.edu</span>, then click the bookmark. It reads your assignments, quizzes, discussions, and grades for every class you&rsquo;re in &mdash; takes a few seconds &mdash; then shows you a box with the result and a <b>Copy</b> button.</p></div></div>';
-  h += '<div class="step"><span class="k">3</span><div><h4>Paste it here</h4>'+
-       '<textarea class="inp" id="paste" placeholder="Paste what the grabber copied"></textarea>'+
-       '<div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap">'+
-       '<button class="btn" id="load">Load my classes</button>'+
-       '<button class="btn ghost" id="reset">Back to the built-in snapshot</button></div>'+
-       '<p class="sub" id="msg"></p></div></div>';
-  h += '</div></div>';
-
-  h += '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Sync across your devices</h3></div><div class="card-b">';
-  h += '<p class="sub" style="padding-top:0">Loading on your laptop does nothing for your phone &mdash; each device keeps its own copy. '+
-       'If you put your data somewhere both can reach, point them at the same address and they&rsquo;ll stay in step.</p>';
-  h += '<input class="inp" id="sync-url" type="url" spellcheck="false" style="width:100%;margin-top:4px" placeholder="https://&hellip; address of your data" value="'+esc(sync.url||"")+'">';
-  h += '<div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;align-items:center">'+
-       '<button class="btn" id="sync-pull">Pull now</button>'+
-       '<label style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);cursor:pointer">'+
-       '<input type="checkbox" id="sync-auto" style="accent-color:var(--gold);width:15px;height:15px"'+(sync.auto?" checked":"")+'> Check on every open</label></div>';
-  h += '<p class="sub" id="sync-msg"></p>';
-  h += '</div></div></div>';
+  var syncOn = !!sync.url;
+  h += source({id:"dev", title:"Your other devices", color: syncOn ? ON : OFF, state: syncOn ? "Syncing" : "Not set up",
+    lines:["Each device keeps its own copy. Point them at the same address and they stay in step. Data with a #k= key in its address is encrypted, and only that address can unlock it."],
+    extra:'<input class="inp" id="sync-url" type="url" spellcheck="false" style="width:100%;margin-top:12px" placeholder="https://… address of your data" value="'+esc(sync.url||"")+'">'+
+          '<div style="display:flex;align-items:center;gap:10px;margin-top:10px"><button class="toggle" role="switch" id="sync-auto" aria-checked="'+(!!sync.auto)+'" aria-label="Check on every open"></button><span class="msg" style="margin:0">Check on every open</span></div>',
+    actions:'<button class="btn" id="sync-pull">Pull now</button>'+(syncOn ? '<button class="btn text" id="sync-off">Stop syncing</button>' : '')});
+  h += '</div>';
   document.getElementById("v-sync").innerHTML = h;
 
+  var q = function(id){ return document.getElementById(id); };
+  var sayer = function(id){ return function(s){ var m = q(id+"-msg"); if(m) m.textContent = s; }; };
   if(DESKTOP){
-    var gm = document.getElementById("g-msg");
-    var gsay = function(s){ if(gm) gm.textContent = s; };
-    document.getElementById("g-pull").onclick = function(){
-      var b = this; b.disabled = true; b.textContent = "Reading Gradescope\u2026";
-      gsay("Opening Gradescope\u2026");
-      pullGradescope(true, gsay, function(ok){
-        if(!ok){ b.disabled = false; b.textContent = "Pull my Gradescope work"; }
+    var dsay = sayer("d2l"), asay = sayer("aleks"), gsay = sayer("gs"), csay = sayer("cal");
+    window.owl.onStatus(function(s){ var m = q("d2l-msg"); if(m && document.activeElement && document.activeElement.id==="d-refresh") m.textContent = s; });
+    q("d-refresh").onclick = function(){ desktopGrab(true, dsay); };
+    if(q("d-off")) q("d-off").onclick = function(){
+      confirmIn("d2l", "This signs you out of D2L, ALEKS and Gradescope on this computer and removes your classes from Owl Hours.", "Disconnect D2L", function(){
+        window.owl.signOut().then(function(){
+          try{ localStorage.removeItem(K.data); }catch(e){}
+          location.reload();
+        });
       });
     };
-    var am = document.getElementById("a-msg");
-    var asay = function(s){ if(am) am.textContent = s; };
-    window.owl.onStatus(asay);
-    document.getElementById("a-pull").onclick = function(){
-      var btn = this;
-      btn.disabled = true; btn.textContent = "Reading ALEKS\u2026";
-      pullAleksNow(asay, function(ok){
-        if(!ok){ btn.disabled = false; btn.textContent = "Pull my ALEKS work"; }
+    q("a-pull").onclick = function(){
+      var b = this; b.disabled = true; b.textContent = "Reading ALEKS…";
+      if(ui.aleksOff){ delete ui.aleksOff; save(K.ui, ui); }
+      window.owl.onStatus(asay);
+      pullAleksNow(asay, function(ok){ if(!ok){ b.disabled = false; b.textContent = "Pull my ALEKS work"; } });
+    };
+    if(q("a-off")) q("a-off").onclick = function(){
+      confirmIn("aleks", "This removes your ALEKS work from Owl Hours and stops it asking to pull. ALEKS itself isn’t touched.", "Disconnect ALEKS", function(){
+        dropSource("aleks"); ui.aleksOff = 1; save(K.ui, ui);
+        var st = alekpState(); delete st.lastPull; save(K.aleks, st);
+        location.reload();
       });
     };
-    var dm = document.getElementById("d-msg");
-    var dsay = function(s){ if(dm) dm.textContent = s; };
-    window.owl.onStatus(dsay);
-    document.getElementById("d-refresh").onclick = function(){ desktopGrab(true, dsay); };
-    document.getElementById("d-signout").onclick = function(){
-      window.owl.signOut().then(function(){ dsay("Signed out. Press Refresh to sign in again."); });
+    q("g-pull").onclick = function(){
+      var b = this; b.disabled = true; b.textContent = "Reading Gradescope…";
+      if(ui.gsOff){ delete ui.gsOff; save(K.ui, ui); }
+      gsay("Opening Gradescope…");
+      pullGradescope(true, gsay, function(ok){ if(!ok){ b.disabled = false; b.textContent = "Read now"; renderSync(); } });
     };
+    if(q("g-off")) q("g-off").onclick = function(){
+      confirmIn("gs", "This signs you out of Gradescope on this computer and removes its work from Owl Hours.", "Disconnect Gradescope", function(){
+        dropSource("gs"); ui.gsOff = 1; save(K.ui, ui);
+        var p = window.owl.forgetSite ? window.owl.forgetSite("https://www.gradescope.com") : Promise.resolve();
+        p.then(function(){ location.reload(); }, function(){ location.reload(); });
+      });
+    };
+    q("c-pull").onclick = function(){
+      var b = this; b.disabled = true; b.textContent = "Reading…";
+      if(ui.calOff){ delete ui.calOff; save(K.ui, ui); }
+      pullCalendar(csay, function(ok){ if(!ok){ b.disabled = false; b.textContent = "Read now"; } });
+    };
+    if(q("c-off")) q("c-off").onclick = function(){
+      confirmIn("cal", "Exams that only live on the D2L calendar will disappear from Owl Hours.", "Turn off", function(){
+        dropSource("cal"); ui.calOff = 1; save(K.ui, ui); location.reload();
+      });
+    };
+  } else {
+    var isSafari = /^((?!chrome|chromium|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
+    if(isSafari){ q("safari-warn").style.display = ""; var dt = document.querySelector("details.br"); if(dt) dt.setAttribute("open",""); }
+    q("bmk").setAttribute("href", SCRAPER);
+    q("bmk").onclick = function(e){
+      e.preventDefault();
+      q("msg").textContent = isSafari
+        ? "Bookmarks can’t run from inside this page. Follow the Safari steps to save it, then click it while you’re on D2L."
+        : "Bookmarks can’t run from inside this page. Drag the button to your bookmarks bar, then click it while you’re on D2L.";
+    };
+    q("copy-code").onclick = function(){
+      var b = this;
+      var write = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(SCRAPER) : Promise.reject();
+      write.then(function(){ b.textContent="Copied"; setTimeout(function(){ b.textContent="Copy the code"; },1600); },
+                 function(){ b.textContent="Press Ctrl+C"; });
+    };
+    q("load").onclick = function(){
+      var raw = q("paste").value.trim(), msg = q("msg");
+      if(!raw){ msg.textContent = "Paste the text the grabber copied first."; return; }
+      var parsed;
+      try{ parsed = JSON.parse(raw); }
+      catch(e){ msg.textContent = "That isn’t the grabber’s output. It should start with { and end with }."; return; }
+      if(!parsed || !parsed.courses || !parsed.courses.length){ msg.textContent = "No classes in there. Run the grabber again while signed in to D2L."; return; }
+      save(K.data, parsed);
+      msg.textContent = "Loaded "+parsed.courses.length+" classes. Reloading…";
+      setTimeout(function(){ location.reload(); }, 700);
+    };
+    q("reset").onclick = function(){ try{ localStorage.removeItem(K.data); }catch(e){} location.reload(); };
   }
-  var su = document.getElementById("sync-url"), sm = document.getElementById("sync-msg");
-  function remember(){ sync.url = su.value.trim(); sync.auto = document.getElementById("sync-auto").checked; save(K.sync, sync); }
+  var su = q("sync-url"), ssay = sayer("dev");
+  function remember(){ sync.url = su.value.trim(); save(K.sync, sync); }
   su.onchange = remember;
-  document.getElementById("sync-auto").onchange = remember;
-  document.getElementById("sync-pull").onclick = function(){
+  q("sync-auto").onclick = function(){ sync.auto = !sync.auto; this.setAttribute("aria-checked", String(sync.auto)); save(K.sync, sync); };
+  q("sync-pull").onclick = function(){
     remember();
-    if(!sync.url){ sm.textContent = "Put the address of your data in the box first."; return; }
-    sm.textContent = "Pulling\u2026";
-    pullSync(false, function(t){ sm.textContent = t; });
+    if(!sync.url){ ssay("Put the address of your data in the box first."); return; }
+    ssay("Pulling…");
+    pullSync(false, ssay);
   };
+  if(q("sync-off")) q("sync-off").onclick = function(){ sync = {url:"", auto:false}; save(K.sync, sync); renderSync(); };
+}
 
-  var isSafari = /^((?!chrome|chromium|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
-  if(isSafari){
-    var w = document.getElementById("safari-warn");
-    if(w) w.style.display = "";
-    var d = document.querySelector("details.br");
-    if(d) d.setAttribute("open","");
+/* ---------- settings ---------- */
+function setRow(title, sub, control){
+  return '<div class="setrow"><div class="tx"><b>'+title+'</b>'+(sub ? '<span>'+sub+'</span>' : '')+'</div>'+control+'</div>';
+}
+function toggleHTML(id, on, label){
+  return '<button class="toggle" role="switch" data-set="'+id+'" aria-checked="'+(!!on)+'" aria-label="'+esc(label)+'"></button>';
+}
+function segHTML(id, opts, picked, label){
+  return '<div class="seg" role="radiogroup" aria-label="'+esc(label)+'">'+opts.map(function(o){
+    return '<button role="radio" data-seg="'+id+'" data-val="'+esc(o[0])+'" aria-checked="'+(String(o[0])===String(picked))+'">'+esc(o[1])+'</button>';
+  }).join('')+'</div>';
+}
+function applyTheme(){ document.documentElement.setAttribute("data-theme", ui.theme || "night"); }
+function renderSettings(){
+  var r = ui.remind || {};
+  var h = '<h1 class="h1">Settings</h1><div class="settings"><div>';
+  h += '<section><h2 class="label">Appearance</h2>'+
+       setRow("Theme", "Night is easiest on your eyes late. Day is easier to read in a bright room.",
+              segHTML("theme", [["night","Night"],["day","Day"],["system","Match my computer"]], ui.theme||"night", "Theme"))+
+       setRow("Week starts on", "", segHTML("weekStart", [[1,"Monday"],[0,"Sunday"]], ui.weekStart === 0 ? 0 : 1, "Week starts on"))+'</section>';
+  h += '<section><h2 class="label">Agenda</h2>'+
+       setRow("Show finished work", "Off folds this week’s finished work into one line at the top.", toggleHTML("showDone", ui.showDone, "Show finished work"))+
+       setRow("Show work with no due date", "Intro discussions and setup quizzes, listed after the timeline.", toggleHTML("showUndated", ui.showUndated !== false, "Show work with no due date"))+
+       setRow("Show dates to check", "Work D2L dates outside this term, usually copied from last year.", toggleHTML("showStale", ui.showStale !== false, "Show dates to check"))+'</section>';
+  var canNotify = typeof Notification !== "undefined";
+  h += '<section><h2 class="label">Reminders</h2>'+
+       (canNotify ? '' : '<p class="msg">This browser can’t show notifications.</p>')+
+       setRow("The night before", "At 8 PM, for anything due the next day.", toggleHTML("remind.eve", r.eve, "Remind me the night before"))+
+       setRow("Two hours before", "For anything you haven’t finished yet.", toggleHTML("remind.two", r.two, "Remind me two hours before"))+
+       setRow("Exams", "A day ahead, with the time and whether it’s online or in person.", toggleHTML("remind.exam", r.exam, "Remind me before exams"))+
+       '<p class="msg">Reminders come from Owl Hours while it’s open'+(DESKTOP ? ", even in the background" : "")+'.</p></section>';
+  h += '</div><div>';
+  h += '<section><h2 class="label">Classes</h2><p class="msg">Turn a class off to hide it from the Agenda and Calendar. Its grades stay.</p>'+
+       courses.map(function(c){
+         return setRow('<span class="dotl" style="--c:'+c.color+'"><i></i>'+esc(c.code)+'</span>', esc(c.name), toggleHTML("class."+c.id, !ui.off[c.id], "Show "+c.code));
+       }).join('')+'</section>';
+  h += '<section><h2 class="label">Updates</h2>'+
+       setRow("Owl Hours "+esc(APP_VERSION), DESKTOP ? '<span id="upd-msg">Updates arrive on their own; you’ll see a banner when one is ready.</span>' : 'The web version updates itself when you reload.',
+              DESKTOP ? '<button class="btn" id="upd-check">Check for updates</button>' : '')+'</section>';
+  h += '<section><h2 class="label">Start over</h2><p class="msg">Erases your classes, checkmarks, tasks and what-if scores from this '+(DESKTOP ? "computer, and signs out of D2L." : "browser.")+'</p>'+
+       '<div id="reset-confirm"></div><p style="margin:8px 0 0"><button class="btn danger" id="reset-all">Erase and start over</button></p></section>';
+  h += '</div></div>';
+  document.getElementById("v-settings").innerHTML = h;
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-seg]"), function(b){
+    b.onclick = function(){
+      var id = this.getAttribute("data-seg"), v = this.getAttribute("data-val");
+      if(id === "theme"){ ui.theme = v; applyTheme(); }
+      if(id === "weekStart"){ ui.weekStart = +v; }
+      save(K.ui, ui); renderSettings();
+    };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-set]"), function(b){
+    b.onclick = function(){
+      var id = this.getAttribute("data-set"), on = this.getAttribute("aria-checked") !== "true";
+      if(id.indexOf("class.") === 0){ var cid = id.slice(6); if(on) delete ui.off[cid]; else ui.off[cid] = 1; }
+      else if(id.indexOf("remind.") === 0){
+        ui.remind = ui.remind || {}; ui.remind[id.slice(7)] = on;
+        if(on && typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission();
+      }
+      else ui[id] = on;
+      save(K.ui, ui); renderSettings();
+    };
+  });
+  var uc = document.getElementById("upd-check");
+  if(uc) uc.onclick = function(){
+    var b = this, m = document.getElementById("upd-msg");
+    b.disabled = true; b.textContent = "Checking…";
+    window.owl.updateCheck().then(function(r){
+      b.disabled = false; b.textContent = "Check for updates";
+      if(!r || !r.ok) m.textContent = "Couldn’t check: "+((r && r.error) || "no connection");
+      else if(r.version && cmpVersion(APP_VERSION, r.version) < 0) m.textContent = "Version "+r.version+" is out. Use the banner at the top to install it.";
+      else m.textContent = "You’re up to date.";
+    });
+  };
+  document.getElementById("reset-all").onclick = function(){
+    confirmIn("reset", "Everything Owl Hours saved on this "+(DESKTOP ? "computer" : "browser")+" will be gone.", "Erase everything", function(){
+      var p = DESKTOP ? window.owl.signOut() : Promise.resolve();
+      p.then(function(){
+        try{ Object.keys(localStorage).forEach(function(k){ if(k.indexOf("owlhours.") === 0) localStorage.removeItem(k); }); }catch(e){}
+        try{ sessionStorage.clear(); }catch(e){}
+        location.reload();
+      });
+    });
+  };
+}
+
+/* ---------- reminders ---------- */
+/* Checked once a minute while the app is open. Each reminder is sent once:
+   what went out is remembered by item and kind. */
+var SENT_KEY = "owlhours.reminded.v1";
+function remindTick(){
+  var r = ui.remind || {};
+  if(!(r.eve || r.two || r.exam) || typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  var sent = load(SENT_KEY, {}), t = Date.now(), changed = false, n = new Date();
+  function send(key, title, body){
+    if(sent[key]) return;
+    sent[key] = t; changed = true;
+    try{ new Notification(title, {body: body}); }catch(e){}
   }
-  document.getElementById("bmk").setAttribute("href", SCRAPER);
-  document.getElementById("bmk").onclick = function(e){
-    e.preventDefault();
-    document.getElementById("msg").textContent = isSafari
-      ? "Bookmarklets can’t run from inside this page. Follow the Safari steps above to save it, then click it while you’re on D2L."
-      : "Bookmarklets can’t run from inside this page — drag the button to your bookmarks bar, then click it while you’re on D2L.";
-  };
-  document.getElementById("copy-code").onclick = function(){
-    var b = this;
-    var write = navigator.clipboard && navigator.clipboard.writeText
-      ? navigator.clipboard.writeText(SCRAPER) : Promise.reject();
-    write.then(function(){ b.textContent="Copied"; setTimeout(function(){ b.textContent="Copy the code"; },1600); },
-               function(){ b.textContent="Press Ctrl+C"; });
-  };
-  document.getElementById("load").onclick = function(){
-    var raw = document.getElementById("paste").value.trim();
-    var msg = document.getElementById("msg");
-    if(!raw){ msg.textContent = "Paste the text the grabber copied first."; return; }
-    var parsed;
-    try{ parsed = JSON.parse(raw); }
-    catch(e){ msg.textContent = "That isn’t the grabber’s output — it should start with a { and end with a }."; return; }
-    if(!parsed || !parsed.courses || !parsed.courses.length){ msg.textContent = "No classes in there. Run the grabber again while signed in to D2L."; return; }
-    save(K.data, parsed);
-    msg.textContent = "Loaded "+parsed.courses.length+" classes. Reloading…";
-    setTimeout(function(){ location.reload(); }, 700);
-  };
-  document.getElementById("reset").onclick = function(){
-    try{ localStorage.removeItem(K.data); }catch(e){}
-    location.reload();
+  visible().forEach(function(it){
+    if(!it.due || it.stale || isDone(it)) return;
+    var due = it.due.getTime(), left = due - t;
+    if(left <= 0) return;
+    var c = byId[it.course], who = c ? c.code+": " : "";
+    if(r.exam && examLike(it) && left <= DAY && left > 2*36e5)
+      send("exam|"+it.key, "Exam tomorrow", who+it.name+", "+fmtDay(it.due,true)+" at "+fmtSpan(it)+(it.mode === "online" ? ", online" : it.where ? ", "+it.where : ""));
+    if(r.two && left <= 2*36e5)
+      send("two|"+it.key, "Due in "+countdown(left), who+it.name);
+    if(r.eve && n.getHours() >= 20 && sod(it.due) === TODAY + DAY)
+      send("eve|"+it.key, "Due tomorrow", who+it.name+" at "+fmtSpan(it));
+  });
+  if(changed){
+    Object.keys(sent).forEach(function(k){ if(t - sent[k] > 14*DAY) delete sent[k]; });
+    save(SENT_KEY, sent);
+  }
+}
+
+/* ---------- first launch ---------- */
+function renderWelcome(){
+  var ex = [["quiz",5,"Tonight · 11:59 PM","Week 6 Quiz",true],["discussion",4,"Sunday · 11:59 PM","Unit 5 — reply to a classmate"],
+            ["aleks",6,"Friday · 11:59 PM","Module 5"],["exam",0,"Tue · 2:20 PM","Test 1"]];
+  var h = '<div class="welcome"><div>'+
+    '<p class="title">Owl Hours</p><p class="tag">Everything due in your KSU classes, on one timeline.</p>'+
+    '<ol class="steps">'+
+    '<li><span class="k">1</span><div><h4>'+(DESKTOP ? "Sign in to D2L" : "Load your classes from D2L")+'</h4><p>'+
+      (DESKTOP ? "On Kennesaw’s own sign-in page, with Duo. Owl Hours never stores your password." : "A bookmark reads them for you. It takes about five seconds.")+'</p></div></li>'+
+    '<li><span class="k">2</span><div><h4>Owl Hours reads your classes</h4><p>Assignments, quizzes, discussions, exams and grades.</p></div></li>'+
+    '<li><span class="k">3</span><div><h4>Add ALEKS or Gradescope if you use them</h4><p>Optional. You can do it later from Sync.</p></div></li></ol>'+
+    '<div class="go"><button class="btn primary" id="empty-cta">'+(DESKTOP ? "Sign in to D2L" : "Get my classes")+'</button>'+
+    '<span class="msg" id="empty-msg" style="margin:0">'+(DESKTOP ? "Your classes stay on this computer." : "Your classes stay in this browser.")+'</span></div></div>'+
+    '<div class="ex"><h2 class="label" style="color:var(--ink-faint);margin-bottom:8px">Example</h2><ol class="tl" style="list-style:none;margin:0;padding:0">'+
+    ex.map(function(e){
+      return '<li class="it'+(e[4]?" next":"")+'"><span class="cap'+(e[0]==="exam"?" exam":"")+(e[4]?" next":"")+'" style="--c:var(--course-'+(e[1]||1)+')">'+icon(e[0])+'</span>'+
+             '<div class="body"><div class="when">'+e[2]+'</div><span class="name">'+e[3]+'</span></div></li>';
+    }).join('')+'</ol></div></div>';
+  document.getElementById("v-welcome").innerHTML = h;
+  document.getElementById("empty-cta").onclick = function(){
+    if(DESKTOP){
+      var m = document.getElementById("empty-msg"), b = this;
+      b.disabled = true; b.textContent = "Opening D2L…";
+      window.owl.onStatus(function(s){ m.textContent = s; });
+      desktopGrab(true, function(s){ m.textContent = s; if(!/Reloading/.test(s)){ b.disabled = false; b.textContent = "Sign in to D2L"; } });
+    } else { show("sync"); }
   };
 }
 
@@ -1375,16 +1819,17 @@ function mergeGradescope(base, res){
 function launchRefresh(){
   var ids = function(d){ return ((d && d.courses)||[]).map(function(c){ return c.id; }).filter(Boolean); };
   var none = function(){ return null; };
-  var gsP  = window.owl.pullGradescope(false).then(null, none);
+  /* a source the user disconnected in Sync stays unread */
+  var gsP  = ui.gsOff ? null : window.owl.pullGradescope(false).then(null, none);
   /* The calendar is read per course. On a first launch there are no courses
      yet, so it has to wait for D2L to say what they are. */
-  var calP = ids(DATA).length ? window.owl.pullCalendar(ids(DATA)).then(null, none) : null;
+  var calP = (!ui.calOff && ids(DATA).length) ? window.owl.pullCalendar(ids(DATA)).then(null, none) : null;
 
   window.owl.grab(false).then(null, none).then(function(d2l){
     var fresh = d2l && d2l.ok && d2l.data && d2l.data.courses && d2l.data.courses.length;
-    if(d2l && d2l.needLogin) showSignInBar();
+    if(d2l && d2l.needLogin && !isEmpty) showSignInBar();
     var base = fresh ? keepExtras(d2l.data, DATA) : JSON.parse(JSON.stringify(DATA));
-    if(!calP && ids(base).length) calP = window.owl.pullCalendar(ids(base)).then(null, none);
+    if(!calP && !ui.calOff && ids(base).length) calP = window.owl.pullCalendar(ids(base)).then(null, none);
 
     return Promise.all([gsP, calP]).then(function(r){
       var next = base, gs = r[0], cal = r[1];
@@ -1407,7 +1852,7 @@ function launchRefresh(){
 /* Offer it rather than doing it: pulling signs the user out of ALEKS, so that
    has to be their call, made at the moment it matters. */
 function offerAleks(){
-  if(!DESKTOP || !alekpStale()) return;
+  if(!DESKTOP || ui.aleksOff || !alekpStale()) return;
   window.owl.checkAleks(courses.map(function(c){ return c.id; })).then(function(ous){
     if(!ous || !ous.length) return;                 /* no ALEKS classes — say nothing */
     var names = ous.map(function(o){
@@ -1518,7 +1963,7 @@ function cmpVersion(a, b){
 function showUpdateBar(html, wire){
   var bar = document.getElementById("updatebar");
   bar.innerHTML = '<div class="ubar-in"><span class="dotpulse"></span>'+html+
-                  '<button class="udismiss" aria-label="Dismiss">&times;</button></div>';
+                  '<button class="udismiss">Not now</button></div>';
   bar.classList.remove("hidden");
   if(wire) wire(bar);
   bar.querySelector(".udismiss").onclick = function(){ bar.classList.add("hidden"); };
@@ -1659,61 +2104,68 @@ if(DESKTOP && !PERSONAL){ wireAutoUpdate(); checkForUpdate(); }
 else if(!DESKTOP) watchForNewBuild();
 
 /* ---------- shell ---------- */
-var VIEWS = ["agenda","calendar","classes","grades","sync"];
+var VIEWS = ["agenda","calendar","classes","grades","sync","settings"];
 function show(v){
+  /* Before any classes are loaded there is nothing to plan, so the first
+     screen explains what Owl Hours is and how to start. Sync and Settings
+     still open, so the web version can reach its grabber. */
+  var welcome = isEmpty && v !== "sync" && v !== "settings";
   ui.view = v; save(K.ui,ui);
+  document.getElementById("v-welcome").classList.toggle("hidden", !welcome);
   VIEWS.forEach(function(n){
-    document.getElementById("v-"+n).classList.toggle("hidden", n!==v);
+    document.getElementById("v-"+n).classList.toggle("hidden", welcome || n!==v);
   });
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
-    t.setAttribute("aria-selected", String(t.getAttribute("data-view")===v));
+    t.setAttribute("aria-selected", String(t.getAttribute("data-view")===v && !welcome));
   });
+  document.getElementById("fab").classList.toggle("hidden", welcome || v !== "agenda");
+  openAddSheet(false);
+  if(welcome){ renderWelcome(); window.scrollTo(0,0); return; }
   if(v==="agenda") renderAgenda();
   if(v==="calendar") renderCalendar();
   if(v==="classes") renderClasses();
   if(v==="grades") renderGrades();
   if(v==="sync") renderSync();
+  if(v==="settings") renderSettings();
   window.scrollTo(0,0);
 }
 Array.prototype.forEach.call(document.querySelectorAll("[data-view]"), function(b){
   b.onclick = function(){ show(this.getAttribute("data-view")); };
 });
+document.getElementById("fab").onclick = function(){ openAddSheet(document.getElementById("addsheet").classList.contains("hidden")); };
 
 document.addEventListener("click", function(e){
   var chk = e.target.closest ? e.target.closest("[data-check]") : null;
-  if(chk){
-    var k = chk.getAttribute("data-check");
-    var item = allItems().filter(function(i){ return i.key === k; })[0];
-    done[k] = item ? (isDone(item) ? 0 : 1) : (done[k] ? 0 : 1);
-    save(K.done, done);
-    if(ui.view==="agenda") renderAgenda();
-    else if(ui.view==="calendar") renderCalendar();
-    else if(ui.view==="classes") renderClasses();
-    return;
-  }
-  var f = e.target.closest ? e.target.closest("[data-filter]") : null;
-  if(f){
-    var id = f.getAttribute("data-filter");
-    if(ui.off[id]) delete ui.off[id]; else ui.off[id] = 1;
-    save(K.ui, ui);
-    renderAgenda();
-  }
+  if(!chk) return;
+  var k = chk.getAttribute("data-check");
+  var item = allItems().filter(function(i){ return i.key === k; })[0];
+  done[k] = item ? (isDone(item) ? 0 : 1) : (done[k] ? 0 : 1);
+  save(K.done, done);
+  if(ui.view==="agenda") renderAgenda();
+  else if(ui.view==="calendar") renderCalendar();
+  else if(ui.view==="classes") renderClasses();
 });
+
+/* "Updated 3:08 AM": when D2L was last read */
+(function(){
+  var el = document.getElementById("updated");
+  if(!DATA.scrapedAt || isEmpty){ el.textContent = ""; return; }
+  var d = new Date(DATA.scrapedAt);
+  el.textContent = "Updated " + (sod(d) === TODAY ? fmtClock(d) : fmtDay(d));
+})();
 
 if(DESKTOP){
   var rb = document.getElementById("btn-refresh");
-  rb.style.display = "";
+  rb.style.display = isEmpty ? "none" : "";
   rb.onclick = function(){
-    var b = this, label = b.textContent;
-    b.textContent = "Refreshing\u2026"; b.disabled = true;
-    var restore = function(){ b.textContent = label; b.disabled = false; };
+    var b = this;
+    b.disabled = true; b.classList.add("spin"); b.setAttribute("aria-label","Refreshing");
+    var restore = function(){ b.disabled = false; b.classList.remove("spin"); b.setAttribute("aria-label","Refresh from D2L"); };
     desktopGrab(true, function(s){
       if(/signed out|sign-in|sign in/i.test(s)){ restore(); showSignInBar(); return; }
-      if(/Reloading/.test(s)){ b.textContent = "Done"; return; }
+      if(/Reloading/.test(s)) return;
       restore();
-      /* D2L is done. ALEKS is a separate system with its own cost, so ask.
-         Gating this on the result text missed the paths that don't produce one;
-         if a reload is coming instead, the launch-time offer covers it. */
+      /* D2L is done. ALEKS is a separate system with its own cost, so ask. */
       offerAleks();
     });
     setTimeout(restore, 8000);
@@ -1724,5 +2176,16 @@ show(VIEWS.indexOf(ui.view)>=0 ? ui.view : "agenda");
 if(sync.auto && sync.url) pullSync(true, null);
 /* Nobody has to remember the button exists: if ALEKS has gone stale, say so. */
 if(DESKTOP) setTimeout(offerAleks, 4000);
+remindTick();
+/* The app can stay open for days. Once a minute, move "now" forward so the
+   next-item countdown and "Today" stay true, without disturbing typing. */
+setInterval(function(){
+  now = new Date(); TODAY = sod(now);
+  remindTick();
+  var a = document.activeElement, busy = a && /INPUT|TEXTAREA|SELECT/.test(a.tagName);
+  if(!busy && document.getElementById("addsheet").classList.contains("hidden")){
+    if(ui.view === "agenda" && !isEmpty) renderAgenda();
+  }
+}, 60000);
 })();
 </script>
