@@ -78,16 +78,21 @@ a{color:inherit}
 .num{font-variant-numeric:tabular-nums}
 
 /* ---------- frame ---------- */
-.bar{position:sticky;top:0;z-index:40;background:linear-gradient(var(--ground) 70%,transparent);-webkit-app-region:drag}
+.bar{position:sticky;top:0;z-index:40;background:linear-gradient(var(--ground) 70%,transparent)}
+/* Dragging the window: a thin strip along the very top, plus the empty space
+   between the tabs and the refresh button. Never the tabs or buttons, where a
+   click that wobbles a pixel used to move the window instead. */
+.dragstrip{position:fixed;top:0;left:0;right:0;height:22px;z-index:60;-webkit-app-region:drag}
+.is-mac .dragstrip{height:30px}
 .bar-in{max-width:1280px;margin:0 auto;padding:28px 56px 16px;display:flex;align-items:center;gap:16px}
-.bar button,.bar a,.bar input{-webkit-app-region:no-drag}
+.bar,.bar button,.bar a,.bar input{-webkit-app-region:no-drag}
 .is-mac .bar-in{padding-top:40px}
 .tabs{display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--ground-raised);border:1px solid var(--rule);box-shadow:var(--float);max-width:100%;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{appearance:none;border:0;background:none;height:38px;padding:0 16px;border-radius:999px;font-size:15px;font-weight:500;color:var(--ink-muted);cursor:pointer;white-space:nowrap}
 .tab:hover{color:var(--ink)}
 .tab[aria-selected="true"]{background:var(--ground-hover);color:var(--ink);font-weight:600}
-.bar .grow{flex:1}
+.bar .grow{flex:1;align-self:stretch;-webkit-app-region:drag}
 .updated{font-size:13px;line-height:18px;font-weight:500;color:var(--ink-muted);white-space:nowrap}
 .round{width:48px;height:48px;border-radius:999px;border:0;background:var(--ink);color:var(--ground);display:grid;place-items:center;box-shadow:var(--float);cursor:pointer;flex:none}
 .round:disabled{opacity:.6;cursor:default}
@@ -188,6 +193,9 @@ select.inp{padding-right:12px}
 .it.next .when{color:var(--lamp)} .it.late .when{color:var(--late)}
 .name{display:block;margin-top:2px;font-size:17px;line-height:23px;font-weight:600;color:var(--ink);overflow-wrap:anywhere;text-decoration:none}
 a.name:hover{text-decoration:underline}
+.check.locked{border:2px dashed var(--rule-strong);cursor:default;opacity:.7}
+.it.locked .name{color:var(--ink-muted)}
+.chip.locked{opacity:.55}
 .it.done .name{color:var(--ink-faint);text-decoration:line-through;text-decoration-thickness:1px}
 .it.done .when{color:var(--ink-faint)}
 .meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin-top:4px}
@@ -199,7 +207,7 @@ a.name:hover{text-decoration:underline}
 .dh em{margin-left:auto;font-style:normal;font-size:14px;line-height:20px;color:var(--ink-faint)}
 .dh.late b{color:var(--late)}
 .dh.flash b{color:var(--lamp)}
-.fold{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;column-gap:16px;padding:0 0 12px}
+.fold{position:relative;z-index:1;display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;column-gap:16px;padding:0 0 12px}
 .fold .cap{background:var(--ground-hover);color:var(--done)}
 .minis{display:flex}
 .minis .cap{width:26px;height:26px;margin-left:-8px;box-shadow:0 0 0 2px var(--ground);opacity:.55;background:var(--c)}
@@ -391,16 +399,17 @@ details.br kbd{font-family:ui-monospace,Menlo,monospace;font-size:12px;border:1p
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 </style>
 
+<div class="dragstrip" aria-hidden="true"></div>
 <header class="bar">
   <div class="bar-in">
     <nav class="tabs" role="tablist" aria-label="Screens">
       <span class="tabpill" id="tabpill" aria-hidden="true"></span>
-      <button class="tab" role="tab" data-view="agenda" aria-selected="true">Agenda</button>
-      <button class="tab" role="tab" data-view="calendar" aria-selected="false">Calendar</button>
-      <button class="tab" role="tab" data-view="classes" aria-selected="false">Classes</button>
-      <button class="tab" role="tab" data-view="grades" aria-selected="false">Grades</button>
-      <button class="tab" role="tab" data-view="sync" aria-selected="false">Sync</button>
-      <button class="tab" role="tab" data-view="settings" aria-selected="false">Settings</button>
+      <button class="tab" role="tab" data-view="agenda" style="view-transition-name:tab-agenda" aria-selected="true">Agenda</button>
+      <button class="tab" role="tab" data-view="calendar" style="view-transition-name:tab-calendar" aria-selected="false">Calendar</button>
+      <button class="tab" role="tab" data-view="classes" style="view-transition-name:tab-classes" aria-selected="false">Classes</button>
+      <button class="tab" role="tab" data-view="grades" style="view-transition-name:tab-grades" aria-selected="false">Grades</button>
+      <button class="tab" role="tab" data-view="sync" style="view-transition-name:tab-sync" aria-selected="false">Sync</button>
+      <button class="tab" role="tab" data-view="settings" style="view-transition-name:tab-settings" aria-selected="false">Settings</button>
     </nav>
     <span class="grow"></span>
     <span class="updated" id="updated"></span>
@@ -518,7 +527,16 @@ if(!ui.off) ui.off={};
 /* Settings that used to be "hide" switches are now "show" switches. */
 if(ui.hideStale){ ui.showStale = false; delete ui.hideStale; }
 if(ui.hideDone){ ui.showDone = false; delete ui.hideDone; }
-if(!ui.theme) ui.theme = "night";
+/* Defaults: match the computer's theme (night when it has no preference),
+   weeks start on Sunday, and every optional list and reminder starts off.
+   Settings saved before these defaults existed are moved onto them once. */
+if(ui.defaults !== 2){
+  ui.theme = "system"; ui.weekStart = 0;
+  ui.showDone = false; ui.showUndated = false; ui.showStale = false;
+  ui.remind = {};
+  ui.defaults = 2;
+}
+if(!ui.theme) ui.theme = "system";
 document.documentElement.setAttribute("data-theme", ui.theme);
 if(/Mac/i.test(navigator.platform||"") && window.owl && window.owl.isDesktop) document.documentElement.classList.add("is-mac");
 
@@ -762,6 +780,22 @@ function dayLabel(dayMs){
   if(n === 7) return "in 1 week";
   return "in "+n+(n === 1 ? " day" : " days");
 }
+/* Work D2L hasn't opened yet: you can see it, but you can't start it. */
+function notOpen(it){ return !!(it.opens && it.opens.getTime() > now.getTime() && !isDone(it)); }
+function fmtOpen(d){
+  var n = Math.round((sod(d) - TODAY)/DAY);
+  var day = n === 0 ? "today" : n === 1 ? "tomorrow" : n < 7 ? d.toLocaleDateString(undefined,{weekday:"short"}) : fmtDay(d);
+  return day + " " + fmtClock(d);
+}
+/* ALEKS work opens through its launch page in D2L, and only while ALEKS has
+   it open: before its start date or after its deadline the page won't show
+   it, so the row isn't a link then. */
+function itemUrl(it){
+  if(kindOf(it) !== "aleks") return it.url;
+  var view = (alekpState().links || {})[it.course];
+  if(!view || !it.due || it.due.getTime() < now.getTime() || notOpen(it)) return null;
+  return "https://kennesaw.view.usg.edu" + view;
+}
 function isOverdue(it){ return !!(it.due && !it.stale && it.due.getTime() < now.getTime() && !isDone(it) && !tookPlace(it)); }
 
 /* The one status word an item gets: whatever changes what you do next. */
@@ -780,6 +814,7 @@ function statusOf(it){
     return ["done", "Done"];
   }
   if(isOverdue(it)) return ["late", "Overdue"];
+  if(notOpen(it)) return ["", "Opens "+fmtOpen(it.opens)];
   if(it.aleksPct != null) return ["", it.aleksPct+"% done"];
   if(it.type === "quiz" && it.attempts > 0) return ["", "Attempt started"];
   if(it.todo) return ["", "Your task"];
@@ -791,7 +826,7 @@ function statusOf(it){
 function nextItem(){
   var t = now.getTime(), best = null;
   visible().forEach(function(it){
-    if(!it.due || it.stale || isDone(it) || it.due.getTime() < t) return;
+    if(!it.due || it.stale || isDone(it) || it.due.getTime() < t || notOpen(it)) return;
     if(!best || it.due < best.due) best = it;
   });
   return best;
@@ -812,15 +847,18 @@ function itemRow(it, o){
   var k = kindOf(it);
   /* tall = most of the work still left, which only ALEKS reports */
   var long = !complete && k === "aleks" && it.aleksPct != null && it.aleksPct < 50 && !late;
-  var cls = "it" + (next ? " next" : "") + (late ? " late" : "") + (complete ? " done" : "");
+  var locked = notOpen(it);
+  var cls = "it" + (next ? " next" : "") + (late ? " late" : "") + (complete ? " done" : "") + (locked ? " locked" : "");
   var when = o.when != null ? o.when : fmtSpan(it);
   if(next && it.due) when += " · in "+countdown(it.due.getTime() - now.getTime());
-  var name = it.url ? '<a class="name" href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.name)+'</a>'
+  var href = itemUrl(it);
+  var name = href ? '<a class="name" href="'+esc(href)+'" target="_blank" rel="noopener">'+esc(it.name)+'</a>'
                     : '<span class="name">'+esc(it.name)+'</span>';
-  return '<li class="'+cls+'" style="view-transition-name:'+vtName(it.key)+'">'+capHTML(it,{next:next, faded:complete, long:long})+
+  return '<li class="'+cls+'" style="view-transition-name:'+vtName(it.key)+'">'+capHTML(it,{next:next, faded:complete || locked, long:long})+
     '<div class="body"><div class="when">'+esc(when)+'</div>'+name+
     '<div class="meta">'+courseTag(c)+statusHTML(statusOf(it))+'</div></div>'+
-    '<button class="check" style="--c:'+courseColor(it)+'" aria-pressed="'+complete+'" data-check="'+esc(it.key)+'" aria-label="Mark '+esc(it.name)+(complete?' not done':' done')+'">'+CHECK_SVG+'</button></li>';
+    (locked ? '<span class="check locked" aria-hidden="true"></span>'
+            : '<button class="check" style="--c:'+courseColor(it)+'" aria-pressed="'+complete+'" data-check="'+esc(it.key)+'" aria-label="Mark '+esc(it.name)+(complete?' not done':' done')+'">'+CHECK_SVG+'</button>')+'</li>';
 }
 
 /* ---------- agenda ---------- */
@@ -944,7 +982,7 @@ function renderAgenda(){
   h += '<aside class="side"><h2 class="label">Exams</h2>';
   h += exams.length ? exams.map(function(i){
     var sub = fmtDay(i.due,true)+" · "+fmtSpan(i)+(i.mode === "online" ? " · online" : i.where ? " · "+i.where : "");
-    var t2 = i.url ? '<a class="t" href="'+esc(i.url)+'" target="_blank" rel="noopener">'+esc(i.name)+'</a>' : '<span class="t">'+esc(i.name)+'</span>';
+    var t2 = itemUrl(i) ? '<a class="t" href="'+esc(itemUrl(i))+'" target="_blank" rel="noopener">'+esc(i.name)+'</a>' : '<span class="t">'+esc(i.name)+'</span>';
     return '<div class="srow">'+capHTML(i,{size:"xs"})+'<div>'+t2+'<div style="margin-top:3px">'+courseTag(byId[i.course])+'</div><div class="s">'+esc(sub)+'</div></div></div>';
   }).join('') : '<p class="msg">No exams on your calendar yet.</p>';
   h += '</aside></div>';
@@ -1027,6 +1065,7 @@ function renderCalendar(){
          '<span class="dn">'+cur.getDate()+'</span>';
     evs.slice(0, evs.length > 3 ? 2 : 3).forEach(function(e){
       var st = isDone(e) ? " done" : isOverdue(e) ? " late" : (nx && e.key === nx.key) ? " next" : examLike(e) ? " exam" : "";
+      if(notOpen(e)) st += " locked";
       h += '<span class="chip'+st+'" style="--c:'+courseColor(e)+'">'+icon(kindOf(e),2.6)+'<span>'+esc(e.name)+'</span></span>';
     });
     if(evs.length>3) h += '<span class="more">+'+(evs.length-2)+' more</span>';
@@ -1200,7 +1239,7 @@ var SCRAPER = "javascript:(function(){var M={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5
 "function MARKD(items,posts){if(!posts)return items;" +
 "var hasSub={};items.forEach(function(i){if(i.sub)hasSub[i.n.replace(SUB,'')]=1});" +
 "return items.map(function(i){if(i.t!=='d')return i;" +
-"var base=i.n.replace(SUB,'').replace(REP,'');var p=posts[base];if(!p||!p.ok)return i;" +
+"var base=i.n.replace(SUB,'').replace(REP,'');var p=posts[base];if(p&&p.s&&!i.o)i.o=p.s;if(!p||!p.ok)return i;" +
 "var done=i.sub?p.i:(hasSub[base]?p.r:(p.i||p.r));" +
 "i.s=done?'Completed':'Not Submitted';return i})}" +
 "var API='/d2l/api/le/1.67/';" +
@@ -1223,7 +1262,7 @@ var SCRAPER = "javascript:(function(){var M={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5
 "return T(API+ou+'/discussions/forums/').then(function(s){var f=[];try{f=JSON.parse(s)}catch(e){}" +
 "if(!f.length)return {};" +
 "return Promise.all(f.map(function(x){return T(API+ou+'/discussions/forums/'+x.ForumId+'/topics/').then(function(ts){" +
-"try{return JSON.parse(ts).map(function(t){return {f:x.ForumId,t:t.TopicId,n:t.Name,d:t.DueDate||t.EndDate||null}})}catch(e){return []}})}))" +
+"try{return JSON.parse(ts).map(function(t){return {f:x.ForumId,t:t.TopicId,n:t.Name,d:t.DueDate||t.EndDate||null,s:t.StartDate||null}})}catch(e){return []}})}))" +
 ".then(function(ls){var all=[].concat.apply([],ls);" +
 "return Promise.all(all.map(function(t){return T(API+ou+'/discussions/forums/'+t.f+'/topics/'+t.t+'/posts/').then(function(ps){" +
 /* D2L answers 403 when asked for the posts of a closed topic, and the
@@ -1232,11 +1271,11 @@ var SCRAPER = "javascript:(function(){var M={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5
    as not submitted. Carry an ok flag so an unreadable topic is left
    alone rather than accused. */
 "var arr=null;try{arr=JSON.parse(ps)}catch(e){}" +
-"if(!Array.isArray(arr))return {n:t.n,id:t.t,d:t.d,i:false,r:false,ok:false};" +
+"if(!Array.isArray(arr))return {n:t.n,id:t.t,d:t.d,s:t.s,i:false,r:false,ok:false};" +
 "var mine=arr.filter(function(p){return String(p.PostingUserId)===String(me)});" +
-"return {n:t.n,id:t.t,d:t.d,i:mine.some(function(p){return !p.ParentPostId}),r:mine.some(function(p){return !!p.ParentPostId}),ok:true}" +
-"}).catch(function(){return {n:t.n,id:t.t,d:t.d,i:false,r:false,ok:false}})}))})" +
-".then(function(rs){var m={};rs.forEach(function(x){m[x.n]={i:x.i,r:x.r,ok:x.ok,id:x.id,d:x.d}});return m})}).catch(function(){return {}})}" +
+"return {n:t.n,id:t.t,d:t.d,s:t.s,i:mine.some(function(p){return !p.ParentPostId}),r:mine.some(function(p){return !!p.ParentPostId}),ok:true}" +
+"}).catch(function(){return {n:t.n,id:t.t,d:t.d,s:t.s,i:false,r:false,ok:false}})}))})" +
+".then(function(rs){var m={};rs.forEach(function(x){m[x.n]={i:x.i,r:x.r,ok:x.ok,id:x.id,d:x.d,s:x.s}});return m})}).catch(function(){return {}})}" +
 /* D2L's discussion page stops listing a topic once it closes, so a MISSED
    discussion used to vanish instead of showing overdue. The API still has it.
    Only graded ones come back — graded above 0 is done, 0 is missed; an
@@ -1943,11 +1982,30 @@ function launchRefresh(){
   });
 }
 
+/* Which D2L page opens ALEKS for each class. Reading it only touches D2L,
+   so unlike a pull it never signs anyone out of ALEKS. */
+function rememberAleksLinks(found){
+  var links = {};
+  (found||[]).forEach(function(x){ if(x && x.ou && x.view) links[x.ou] = x.view; });
+  if(!Object.keys(links).length) return false;
+  var st = alekpState(); st.links = links; save(K.aleks, st);
+  return true;
+}
+function learnAleksLinks(){
+  if(!DESKTOP || ui.aleksOff || alekpState().links) return;
+  if(!items.some(function(i){ return i.src === "aleks"; })) return;
+  window.owl.checkAleks(courses.map(function(c){ return c.id; })).then(function(found){
+    if(rememberAleksLinks(found) && (ui.view === "agenda" || ui.view === "calendar")) show(ui.view, true);
+  }).catch(function(){});
+}
+
 /* Offer it rather than doing it: pulling signs the user out of ALEKS, so that
    has to be their call, made at the moment it matters. */
 function offerAleks(){
   if(!DESKTOP || ui.aleksOff || !alekpStale()) return;
-  window.owl.checkAleks(courses.map(function(c){ return c.id; })).then(function(ous){
+  window.owl.checkAleks(courses.map(function(c){ return c.id; })).then(function(found){
+    rememberAleksLinks(found);
+    var ous = (found||[]).map(function(x){ return x && x.ou ? x.ou : x; });
     if(!ous || !ous.length) return;                 /* no ALEKS classes — say nothing */
     var names = ous.map(function(o){
       var c = byId[o]; return c ? c.code : o;
@@ -2301,6 +2359,7 @@ show(VIEWS.indexOf(ui.view)>=0 ? ui.view : "agenda");
 if(sync.auto && sync.url) pullSync(true, null);
 /* Nobody has to remember the button exists: if ALEKS has gone stale, say so. */
 if(DESKTOP) setTimeout(offerAleks, 4000);
+if(DESKTOP) setTimeout(learnAleksLinks, 6000);
 remindTick();
 /* The app can stay open for days. Once a minute, move "now" forward so the
    next-item countdown and "Today" stay true, without disturbing typing. */

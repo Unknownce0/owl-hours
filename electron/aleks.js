@@ -32,7 +32,9 @@ async function findLaunchLinks(win, courseIds) {
                 var hay = ((t.Title||'') + ' ' + (m.Title||'')).toLowerCase();
                 // an LTI link whose title mentions ALEKS is the launch point
                 if (t.TypeIdentifier === 'Link' && hay.indexOf('aleks') >= 0 && t.Url) {
-                  out.push({ou: ou, title: t.Title, url: t.Url});
+                  /* the D2L page that opens ALEKS, the one a student clicks */
+                  out.push({ou: ou, title: t.Title, url: t.Url,
+                            view: (t.TopicId || t.Identifier) ? '/d2l/le/content/'+ou+'/viewContent/'+(t.TopicId || t.Identifier)+'/View' : null});
                 }
               });
               walk(m.Modules);
@@ -287,7 +289,7 @@ async function findCourses(courseIds) {
     if (!/view\.usg\.edu/.test(win.webContents.getURL())) { win.destroy(); return []; }
     const links = await findLaunchLinks(win, courseIds);
     win.destroy();
-    return links.map((l) => l.ou);
+    return links.map((l) => ({ ou: l.ou, view: l.view }));
   } catch (e) {
     if (!win.isDestroyed()) win.destroy();
     return [];
