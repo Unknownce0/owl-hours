@@ -321,12 +321,58 @@ details.br kbd{font-family:ui-monospace,Menlo,monospace;font-size:12px;border:1p
 .welcome .go .btn{height:48px;padding:0 24px;font-size:16px}
 .welcome .ex{padding:28px;border-radius:28px;background:var(--ground-raised);border:1px solid var(--rule)}
 .welcome .ex .it{grid-template-columns:44px minmax(0,1fr)}
+/* ---------- motion ----------
+   Quick and quiet: 120–260ms, one soft spring for things that move or grow.
+   Screen changes use view transitions (see vt() in the script); the rules
+   below tune them and handle the small touches. */
+:root{
+  --spring:linear(0, 0.12 6%, 0.42 14%, 0.74 24%, 0.94 34%, 1.03 44%, 1.05 52%, 1.03 64%, 1.01 76%, 1);
+  --ease-out:cubic-bezier(.2,.8,.2,1);
+}
+.tabs{position:relative}
+.tab{position:relative;z-index:1}
+.tab[aria-selected="true"]{background:transparent}
+.tabpill{position:absolute;top:4px;left:0;height:38px;border-radius:999px;background:var(--ground-hover);pointer-events:none;view-transition-name:tabpill}
+.bar{view-transition-name:bar}
+.ubar{view-transition-name:banner}
+/* presses give a little under the finger */
+.btn,.round,.tab,.day,.cell,.check,.grow-btn,.toggle,.seg button,.chip{transition:transform .12s var(--ease-out),background-color .15s,color .15s,border-color .15s,box-shadow .15s}
+.btn:active,.tab:active,.seg button:active{transform:scale(.96)}
+.round:active{transform:scale(.92)}
+.day:active,.cell:active{transform:scale(.97)}
+.check:active{transform:scale(.88)}
+.grow-btn:active{transform:scale(.995)}
+/* the switch knob slides with a spring */
+.toggle::after{transition:left .26s var(--spring),background-color .15s}
+/* ticking something done */
+.check.pop{animation:pop .26s var(--spring)}
+@keyframes pop{0%{transform:scale(.85)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.check svg{transition:opacity .12s}
+/* the + button turns into a close button, and the panel grows out of it */
+.fab svg{transition:transform .22s var(--spring)}
+.fab[aria-expanded="true"] svg{transform:rotate(45deg)}
+.addsheet:not(.hidden){animation:sheet .26s var(--spring);transform-origin:calc(100% - 24px) calc(100% + 40px)}
+@keyframes sheet{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+.ubar:not(.hidden) .ubar-in{animation:drop .26s var(--spring)}
+@keyframes drop{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.gdetail{animation:open .24s var(--ease-out)}
+@keyframes open{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.round.spin svg{animation:spin .9s cubic-bezier(.5,0,.5,1) infinite}
+/* view transitions: a short cross-fade for the page, a glide for moving things */
+::view-transition-group(*){animation-duration:.24s;animation-timing-function:var(--ease-out)}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.18s}
+::view-transition-group(tabpill){animation-duration:.3s;animation-timing-function:var(--spring)}
+::view-transition-new(*):only-child{animation:vt-in .22s var(--ease-out) both}
+::view-transition-old(*):only-child{animation:vt-out .16s ease-in both}
+@keyframes vt-in{from{opacity:0;transform:scale(.97)}}
+@keyframes vt-out{to{opacity:0;transform:scale(.97)}}
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 </style>
 
 <header class="bar">
   <div class="bar-in">
     <nav class="tabs" role="tablist" aria-label="Screens">
+      <span class="tabpill" id="tabpill" aria-hidden="true"></span>
       <button class="tab" role="tab" data-view="agenda" aria-selected="true">Agenda</button>
       <button class="tab" role="tab" data-view="calendar" aria-selected="false">Calendar</button>
       <button class="tab" role="tab" data-view="classes" aria-selected="false">Classes</button>
@@ -469,13 +515,18 @@ function courseName(t){
   return t.replace(/\s+Section\s+\w+/,"").replace(/\s+XLS\s+Group(\s+\w+)?/,"")
           .replace(/\s+Lab\b/," Lab").replace(/\s+CSE\s?\d{4}[A-Z]?/,"").replace(/\s+\d{4}[A-Z]?\s*$/,"").trim();
 }
-var courses = (DATA.courses||[]).map(function(c,i){
+/* The model is rebuilt whenever fresh data arrives, so a refresh can
+   update the screen in place instead of reloading the window. */
+var courses, byId, items;
+function buildModel(){
+isEmpty = !DATA.courses || !DATA.courses.length;
+courses = (DATA.courses||[]).map(function(c,i){
   return { id:c.id, raw:c.title, name:courseName(c.title), code:c.code||courseCode(c.title),
            color:"var(--course-"+((i%6)+1)+")", idx:i, grades:c.grades||[], fc:c.fc||null };
 });
-var byId = {}; courses.forEach(function(c){ byId[c.id]=c; });
+byId = {}; courses.forEach(function(c){ byId[c.id]=c; });
 
-var items = [];
+items = [];
 (DATA.courses||[]).forEach(function(c){
   /* An exam found in an announcement steps aside once the same exam shows up
      on the calendar (within a day and a half), so it is never listed twice. */
@@ -508,6 +559,8 @@ var items = [];
     });
   });
 });
+}
+buildModel();
 function allItems(){
   return items.concat(todos.map(function(t){
     return { key:"todo|"+t.id, course:t.course||"", type:"todo", name:t.name,
@@ -722,6 +775,13 @@ function nextItem(){
   return best;
 }
 
+/* A stable, CSS-safe name per item, so a view transition can follow a row
+   from where it was to where it is now. */
+function vtName(key){
+  var h = 5381;
+  for(var i=0;i<key.length;i++) h = ((h << 5) + h + key.charCodeAt(i)) | 0;
+  return "r" + (h >>> 0).toString(36);
+}
 /* One row on a timeline: capsule, time, name, class and status, check. */
 function itemRow(it, o){
   o = o || {};
@@ -735,7 +795,7 @@ function itemRow(it, o){
   if(next && it.due) when += " · in "+countdown(it.due.getTime() - now.getTime());
   var name = it.url ? '<a class="name" href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.name)+'</a>'
                     : '<span class="name">'+esc(it.name)+'</span>';
-  return '<li class="'+cls+'">'+capHTML(it,{next:next, faded:complete, long:long})+
+  return '<li class="'+cls+'" style="view-transition-name:'+vtName(it.key)+'">'+capHTML(it,{next:next, faded:complete, long:long})+
     '<div class="body"><div class="when">'+esc(when)+'</div>'+name+
     '<div class="meta">'+courseTag(c)+statusHTML(statusOf(it))+'</div></div>'+
     '<button class="check" style="--c:'+courseColor(it)+'" aria-pressed="'+complete+'" data-check="'+esc(it.key)+'" aria-label="Mark '+esc(it.name)+(complete?' not done':' done')+'">'+CHECK_SVG+'</button></li>';
@@ -831,7 +891,7 @@ function renderAgenda(){
     var title = g.k === TODAY ? "Today" : g.k === TODAY+DAY ? "Tomorrow" : dd.toLocaleDateString(undefined,{weekday:"long"});
     var sub = g.k === TODAY || g.k === TODAY+DAY ? dd.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})
                                                : fmtDay(dd);
-    tl += '<li class="dh" id="dh-'+g.k+'"><b>'+esc(title)+'</b><span>'+esc(sub)+'</span>'+
+    tl += '<li class="dh" id="dh-'+g.k+'" style="view-transition-name:d'+g.k+'"><b>'+esc(title)+'</b><span>'+esc(sub)+'</span>'+
           (g.k > TODAY+DAY ? '<em>'+dayLabel(g.k)+'</em>' : '')+'</li>';
     tl += g.items.map(function(i){ return itemRow(i,{next: nx && i.key === nx.key}); }).join('');
   });
@@ -869,11 +929,11 @@ function renderAgenda(){
   el.innerHTML = h;
 
   var q = function(id){ return document.getElementById(id); };
-  q("wk-prev").onclick = function(){ weekOffset--; renderAgenda(); };
-  q("wk-next").onclick = function(){ weekOffset++; renderAgenda(); };
-  if(q("wk-now")) q("wk-now").onclick = function(){ weekOffset = 0; renderAgenda(); };
-  if(q("fold-t")) q("fold-t").onclick = function(){ foldOpen = !foldOpen; renderAgenda(); };
-  if(q("tl-more")) q("tl-more").onclick = function(){ agendaAll = true; renderAgenda(); };
+  q("wk-prev").onclick = function(){ weekOffset--; vt(renderAgenda); };
+  q("wk-next").onclick = function(){ weekOffset++; vt(renderAgenda); };
+  if(q("wk-now")) q("wk-now").onclick = function(){ weekOffset = 0; vt(renderAgenda); };
+  if(q("fold-t")) q("fold-t").onclick = function(){ foldOpen = !foldOpen; vt(renderAgenda); };
+  if(q("tl-more")) q("tl-more").onclick = function(){ agendaAll = true; vt(renderAgenda); };
   Array.prototype.forEach.call(el.querySelectorAll("[data-jump]"), function(b){
     b.onclick = function(){
       var k = +this.getAttribute("data-jump"), head = q("dh-"+k);
@@ -953,18 +1013,18 @@ function renderCalendar(){
   h += '</div></div>';
 
   var sd = new Date(calSel + 3*36e5), list = (map[calSel]||[]).sort(function(a,b){ return a.due-b.due; });
-  h += '<aside class="dayside"><h2>'+esc(sd.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}))+'</h2>'+
+  h += '<aside class="dayside" style="view-transition-name:dayside"><h2>'+esc(sd.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}))+'</h2>'+
        '<div class="sub">'+(calSel===TODAY ? "Today" : calSel < TODAY ? "Past" : dayLabel(calSel).replace(/^in /,"In "))+'</div>';
   h += list.length ? '<ol class="tl">'+list.map(function(i){ return itemRow(i,{next: nx && i.key === nx.key}); }).join('')+'</ol>'
                    : '<p class="msg" style="margin-top:16px">Nothing due this day.</p>';
   h += '</aside></div>';
 
   document.getElementById("v-calendar").innerHTML = h;
-  document.getElementById("c-prev").onclick = function(){ calM--; if(calM<0){calM=11;calY--;} renderCalendar(); };
-  document.getElementById("c-next").onclick = function(){ calM++; if(calM>11){calM=0;calY++;} renderCalendar(); };
-  document.getElementById("c-today").onclick = function(){ calM=now.getMonth(); calY=now.getFullYear(); calSel=TODAY; renderCalendar(); };
+  document.getElementById("c-prev").onclick = function(){ calM--; if(calM<0){calM=11;calY--;} vt(renderCalendar); };
+  document.getElementById("c-next").onclick = function(){ calM++; if(calM>11){calM=0;calY++;} vt(renderCalendar); };
+  document.getElementById("c-today").onclick = function(){ calM=now.getMonth(); calY=now.getFullYear(); calSel=TODAY; vt(renderCalendar); };
   Array.prototype.forEach.call(document.querySelectorAll("[data-day]"), function(b){
-    b.onclick = function(){ calSel = +this.getAttribute("data-day"); renderCalendar(); };
+    b.onclick = function(){ calSel = +this.getAttribute("data-day"); vt(renderCalendar); };
   });
 }
 
@@ -1046,7 +1106,7 @@ function renderGrades(){
             : g.d2l ? "D2L’s grade"+(g.fcLetter ? " · "+g.fcLetter : "")
             : (g.whatIfs ? "With your what-ifs" : "Raw points from "+g.entered+" graded")+" · "+letter(g.pct);
     var low = g.pct != null && g.pct < 70;
-    h += '<button class="grow-btn" aria-expanded="'+open+'" data-gopen="'+c.id+'">'+
+    h += '<button class="grow-btn" aria-expanded="'+open+'" data-gopen="'+c.id+'" style="view-transition-name:g'+vtName(String(c.id))+'">'+
          '<span class="figure'+(g.pct==null?" none":"")+'">'+(g.pct==null ? "—" : g.pct.toFixed(1))+'</span>'+
          '<span class="gn"><span class="gt"><b>'+esc(c.name)+'</b>'+courseTag(c)+'<span class="gs">'+esc(sub)+'</span>'+
          (low ? statusHTML(["late","Below 70"]) : '')+'</span>'+
@@ -1079,7 +1139,7 @@ function renderGrades(){
   h += '</div>';
   document.getElementById("v-grades").innerHTML = h;
   Array.prototype.forEach.call(document.querySelectorAll("[data-gopen]"), function(b){
-    b.onclick = function(){ var id = this.getAttribute("data-gopen"); gradeOpen[id] = !gradeOpen[id]; renderGrades(); };
+    b.onclick = function(){ var id = this.getAttribute("data-gopen"); gradeOpen[id] = !gradeOpen[id]; vt(renderGrades); };
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-wi]"), function(inp){
     inp.oninput = function(){
@@ -1556,7 +1616,7 @@ function renderWelcome(){
       var m = document.getElementById("empty-msg"), b = this;
       b.disabled = true; b.textContent = "Opening D2L…";
       window.owl.onStatus(function(s){ m.textContent = s; });
-      desktopGrab(true, function(s){ m.textContent = s; if(!/Reloading/.test(s)){ b.disabled = false; b.textContent = "Sign in to D2L"; } });
+      desktopGrab(true, function(s){ m.textContent = s; if(!/^Updated/.test(s)){ b.disabled = false; b.textContent = "Sign in to D2L"; } });
     } else { show("sync"); }
   };
 }
@@ -1583,13 +1643,28 @@ function keepExtras(next, prev){
   return next;
 }
 
+/* Fresh data goes straight onto the screen: rebuild the model and redraw the
+   current view inside a view transition, so new rows fade in and moved rows
+   slide, instead of the whole window flashing through a reload. */
+function applyNow(next){
+  var wasEmpty = isEmpty;
+  save(K.data, next);
+  DATA = next;
+  isCustom = true;
+  buildModel();
+  vt(function(){
+    updateStamp();
+    var rb = document.getElementById("btn-refresh");
+    if(DESKTOP && rb) rb.style.display = isEmpty ? "none" : "";
+    show(wasEmpty && !isEmpty ? "agenda" : ui.view, true);
+  });
+}
 function applyData(j, note){
   if(!j || !j.courses || !j.courses.length) return false;
   j = keepExtras(j);
   if(JSON.stringify(j) === JSON.stringify(DATA)){ if(note) note("Already up to date."); return true; }
-  save(K.data, j);
-  if(note) note("Got "+j.courses.length+" classes. Reloading\u2026");
-  setTimeout(function(){ location.reload(); }, note ? 500 : 0);
+  if(note) note("Updated "+j.courses.length+" classes.");
+  applyNow(j);
   return true;
 }
 
@@ -1645,11 +1720,10 @@ function pullAleksNow(note, done){
       course.items = (course.items||[]).filter(function(i){ return i.src !== "aleks" && !isLegacyAleks(i); });
       rc.items.forEach(function(i){ course.items.push(i); added++; });
     });
-    save(K.data, next);
     var st = alekpState(); st.lastPull = Date.now(); delete st.snoozeUntil; save(K.aleks, st);
-    if(note) note("Loaded "+added+" ALEKS item"+(added===1?"":"s")+". Reloading\u2026");
+    if(note) note("Loaded "+added+" ALEKS item"+(added===1?"":"s")+".");
     if(done) done(true);
-    setTimeout(function(){ location.reload(); }, 700);
+    applyNow(next);
   }, function(e){
     if(note) note("Couldn\u2019t read ALEKS: "+e);
     if(done) done(false);
@@ -1721,11 +1795,10 @@ function pullCalendar(note, done){
       if(done) done(false);
       return;
     }
-    save(K.data, next);
     if(note) note("Calendar: "+added+" added, "+removed+" replaced or removed"
-                  +(exams?", including "+exams+" exam"+(exams===1?"":"s"):"")+". Reloading…");
+                  +(exams?", including "+exams+" exam"+(exams===1?"":"s"):"")+".");
     if(done) done(true);
-    setTimeout(function(){ location.reload(); }, 700);
+    applyNow(next);
   }, function(){ if(done) done(false); });
 }
 
@@ -1786,11 +1859,10 @@ function pullGradescope(interactive, note, done){
       if(done) done(false);
       return;
     }
-    save(K.data, next);
     var st = load(K.gs,{}); st.lastPull = Date.now(); save(K.gs, st);
-    if(note) note("Loaded "+added+" Gradescope item"+(added===1?"":"s")+". Reloading\u2026");
+    if(note) note("Loaded "+added+" Gradescope item"+(added===1?"":"s")+".");
     if(done) done(true);
-    setTimeout(function(){ location.reload(); }, 700);
+    applyNow(next);
   }, function(e){
     if(note) note("Couldn\u2019t read Gradescope: "+e);
     if(done) done(false);
@@ -1844,7 +1916,7 @@ function launchRefresh(){
         showSignInBar("Your exams live only in the D2L calendar, and Owl Hours can\u2019t read it until you sign in.");
       }
       markSession("owlhours.launch");
-      if(!sameData(next, DATA)){ save(K.data, next); location.reload(); }
+      if(!sameData(next, DATA)) applyNow(next);
     });
   });
 }
@@ -1884,9 +1956,10 @@ function showSignInBar(note){
         b.disabled = true; b.textContent = "Opening D2L\u2026";
         desktopGrab(true, function(s){
           var msg = bar.querySelector(".utext");
-          if(/Reloading|up to date/i.test(s)){
+          if(/^Updated|up to date/i.test(s)){
             b.textContent = "Signed in";
-            msg.innerHTML = "<b>Signed in.</b> Bringing everything up to date\u2026";
+            msg.innerHTML = "<b>Signed in.</b> Everything is up to date.";
+            setTimeout(function(){ bar.classList.add("hidden"); }, 2500);
           } else {
             b.disabled = false; b.textContent = "Sign in to D2L";
             msg.textContent = s;
@@ -1936,11 +2009,8 @@ function pullSync(silent, say){
     if(!j || !j.courses || !j.courses.length) throw new Error("no classes in that data");
     j = keepExtras(j);
     if(JSON.stringify(j) === JSON.stringify(DATA)){ if(say) say("Already up to date."); return; }
-    save(K.data, j);
-    /* one reload per page-open, so an auto-pull can never spin */
-    try{ if(silent){ if(sessionStorage.getItem("owlhours.pulled")) return; sessionStorage.setItem("owlhours.pulled","1"); } }catch(e){}
-    if(say) say("Got "+j.courses.length+" classes. Reloading\u2026");
-    setTimeout(function(){ location.reload(); }, say ? 600 : 0);
+    if(say) say("Updated "+j.courses.length+" classes.");
+    applyNow(j);
   }).catch(function(e){
     if(say) say("Could not pull: "+e.message);
   });
@@ -2105,7 +2175,34 @@ else if(!DESKTOP) watchForNewBuild();
 
 /* ---------- shell ---------- */
 var VIEWS = ["agenda","calendar","classes","grades","sync","settings"];
-function show(v){
+/* Every change on screen goes through here. The browser snapshots the page,
+   runs the update, and animates between the two: rows that moved slide, new
+   ones fade in, the tab pill glides. Reduced motion skips it entirely. */
+var calmMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var inTransition = false;
+function vt(update){
+  if(calmMotion || inTransition || !document.startViewTransition){ update(); return; }
+  inTransition = true;
+  var t = document.startViewTransition(update);
+  t.finished.then(function(){ inTransition = false; }, function(){ inTransition = false; });
+}
+/* the sliding pill behind the selected tab */
+function placeTabPill(){
+  var sel = document.querySelector('.tab[aria-selected="true"]'), pill = document.getElementById("tabpill");
+  if(!pill) return;
+  if(!sel){ pill.style.opacity = "0"; return; }
+  pill.style.opacity = "1";
+  pill.style.width = sel.offsetWidth+"px";
+  pill.style.transform = "translateX("+sel.offsetLeft+"px)";
+}
+function updateStamp(){
+  var el = document.getElementById("updated");
+  if(!DATA.scrapedAt || isEmpty){ el.textContent = ""; return; }
+  var d = new Date(DATA.scrapedAt);
+  el.textContent = "Updated " + (sod(d) === TODAY ? fmtClock(d) : fmtDay(d));
+}
+function show(v, keepScroll){
+  if(!keepScroll && ui.view !== v){ vt(function(){ show(v, "inner"); }); return; }
   /* Before any classes are loaded there is nothing to plan, so the first
      screen explains what Owl Hours is and how to start. Sync and Settings
      still open, so the web version can reach its grabber. */
@@ -2120,6 +2217,7 @@ function show(v){
   });
   document.getElementById("fab").classList.toggle("hidden", welcome || v !== "agenda");
   openAddSheet(false);
+  placeTabPill();
   if(welcome){ renderWelcome(); window.scrollTo(0,0); return; }
   if(v==="agenda") renderAgenda();
   if(v==="calendar") renderCalendar();
@@ -2127,8 +2225,11 @@ function show(v){
   if(v==="grades") renderGrades();
   if(v==="sync") renderSync();
   if(v==="settings") renderSettings();
-  window.scrollTo(0,0);
+  /* fresh data redraws in place; only a tab change goes back to the top */
+  if(keepScroll !== true) window.scrollTo(0,0);
 }
+window.addEventListener("resize", placeTabPill);
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(placeTabPill);
 Array.prototype.forEach.call(document.querySelectorAll("[data-view]"), function(b){
   b.onclick = function(){ show(this.getAttribute("data-view")); };
 });
@@ -2141,18 +2242,20 @@ document.addEventListener("click", function(e){
   var item = allItems().filter(function(i){ return i.key === k; })[0];
   done[k] = item ? (isDone(item) ? 0 : 1) : (done[k] ? 0 : 1);
   save(K.done, done);
-  if(ui.view==="agenda") renderAgenda();
-  else if(ui.view==="calendar") renderCalendar();
-  else if(ui.view==="classes") renderClasses();
+  /* the ring fills with a small pop first, then the row slides to its new place */
+  var ticked = done[k] === 1;
+  chk.setAttribute("aria-pressed", String(ticked));
+  if(ticked && !calmMotion) chk.classList.add("pop");
+  setTimeout(function(){
+    vt(function(){
+      if(ui.view==="agenda") renderAgenda();
+      else if(ui.view==="calendar") renderCalendar();
+      else if(ui.view==="classes") renderClasses();
+    });
+  }, ticked && !calmMotion ? 260 : 0);
 });
 
-/* "Updated 3:08 AM": when D2L was last read */
-(function(){
-  var el = document.getElementById("updated");
-  if(!DATA.scrapedAt || isEmpty){ el.textContent = ""; return; }
-  var d = new Date(DATA.scrapedAt);
-  el.textContent = "Updated " + (sod(d) === TODAY ? fmtClock(d) : fmtDay(d));
-})();
+updateStamp();
 
 if(DESKTOP){
   var rb = document.getElementById("btn-refresh");
@@ -2163,7 +2266,7 @@ if(DESKTOP){
     var restore = function(){ b.disabled = false; b.classList.remove("spin"); b.setAttribute("aria-label","Refresh from D2L"); };
     desktopGrab(true, function(s){
       if(/signed out|sign-in|sign in/i.test(s)){ restore(); showSignInBar(); return; }
-      if(/Reloading/.test(s)) return;
+      if(/^(Opening|Checking)/.test(s)) return;
       restore();
       /* D2L is done. ALEKS is a separate system with its own cost, so ask. */
       offerAleks();
