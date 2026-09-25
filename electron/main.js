@@ -250,7 +250,8 @@ app.whenReady().then(() => {
   const win = createWindow();
   updater.init(send);
   win.webContents.once('did-finish-load', () => {
-    setTimeout(refreshQuietly, 1500);
+    /* The launch refresh is started by the page itself, alongside
+       Gradescope and the calendar, so the three land in one reload. */
     /* Ask GitHub once per launch whether there is anything newer. */
     setTimeout(() => { updater.check(); }, 4000);
     setInterval(refreshQuietly, REFRESH_EVERY);

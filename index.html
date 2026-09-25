@@ -284,7 +284,7 @@ details.br kbd{font-family:var(--mono);font-size:11.5px;background:var(--panel);
 "use strict";
 
 var DEFAULT_DATA = null;
-var APP_VERSION  = "1.9.0";
+var APP_VERSION  = "1.9.1";
 /* A personal build carries its own coursework. Downloading the public
    release would replace it with an empty one, so never offer that here. */
 var PERSONAL     = /*__PERSONAL__*/false;
@@ -1144,10 +1144,10 @@ var DESKTOP = !!(window.owl && window.owl.isDesktop);
 
 /* Items flagged x:1 come from somewhere D2L can't see (ALEKS, hand-added work).
    A refresh replaces the whole dataset, so carry them over or they vanish. */
-function keepExtras(next){
+function keepExtras(next, prev){
   if(!next || !next.courses) return next;
   var mine = {};
-  (DATA.courses||[]).forEach(function(c){
+  ((prev || DATA).courses||[]).forEach(function(c){
     var extras = (c.items||[]).filter(function(i){ return i.x; });
     if(extras.length) mine[c.id] = extras;
   });
@@ -1291,7 +1291,25 @@ function pullCalendar(note, done){
       if(done) done(false, res && res.needLogin);
       return;
     }
-    var next = JSON.parse(JSON.stringify(DATA));
+    var m = mergeCalendar(DATA, res), next = m.next, added = m.added, exams = m.exams, removed = m.removed;
+
+    /* A clean-up with nothing added is still a change worth saving. */
+    if(sameData(next, DATA)){
+      if(note) note("Nothing new in the calendar.");
+      if(done) done(false);
+      return;
+    }
+    save(K.data, next);
+    if(note) note("Calendar: "+added+" added, "+removed+" replaced or removed"
+                  +(exams?", including "+exams+" exam"+(exams===1?"":"s"):"")+". Reloading…");
+    if(done) done(true);
+    setTimeout(function(){ location.reload(); }, 700);
+  }, function(){ if(done) done(false); });
+}
+
+/* Folds a calendar pull into a copy of \`base\`; \`base\` itself is untouched. */
+function mergeCalendar(base, res){
+    var next = JSON.parse(JSON.stringify(base));
     var added = 0, exams = 0, removed = 0;
 
     next.courses.forEach(function(c){
@@ -1321,19 +1339,7 @@ function pullCalendar(note, done){
         if(row.exam) exams++;
       });
     });
-
-    /* A clean-up with nothing added is still a change worth saving. */
-    if(sameData(next, DATA)){
-      if(note) note("Nothing new in the calendar.");
-      if(done) done(false);
-      return;
-    }
-    save(K.data, next);
-    if(note) note("Calendar: "+added+" added, "+removed+" replaced or removed"
-                  +(exams?", including "+exams+" exam"+(exams===1?"":"s"):"")+". Reloading…");
-    if(done) done(true);
-    setTimeout(function(){ location.reload(); }, 700);
-  }, function(){ if(done) done(false); });
+    return { next: next, added: added, exams: exams, removed: removed };
 }
 
 function pullGradescope(interactive, note, done){
@@ -1345,15 +1351,7 @@ function pullGradescope(interactive, note, done){
       if(done) done(false, res && res.needLogin);
       return;
     }
-    var next = JSON.parse(JSON.stringify(DATA));
-    var added = 0, unmatched = [];
-    res.courses.forEach(function(gc){
-      var key = courseKey(gc.code) || courseKey(gc.name);
-      var course = next.courses.filter(function(c){ return courseKey(c.code) === key; })[0];
-      if(!course){ unmatched.push(gc.code || gc.name); return; }
-      course.items = (course.items||[]).filter(function(i){ return i.src !== "gs"; });
-      gc.items.forEach(function(i){ course.items.push(i); added++; });
-    });
+    var m = mergeGradescope(DATA, res), next = m.next, added = m.added, unmatched = m.unmatched;
     if(!added){
       if(note) note(unmatched.length ? "Gradescope has "+esc(unmatched.join(", "))+", which doesn\u2019t match any D2L class."
                                      : "Nothing new from Gradescope.");
@@ -1374,6 +1372,57 @@ function pullGradescope(interactive, note, done){
   }, function(e){
     if(note) note("Couldn\u2019t read Gradescope: "+e);
     if(done) done(false);
+  });
+}
+
+function mergeGradescope(base, res){
+  var next = JSON.parse(JSON.stringify(base));
+  var added = 0, unmatched = [];
+  res.courses.forEach(function(gc){
+    var key = courseKey(gc.code) || courseKey(gc.name);
+    var course = next.courses.filter(function(c){ return courseKey(c.code) === key; })[0];
+    if(!course){ unmatched.push(gc.code || gc.name); return; }
+    course.items = (course.items||[]).filter(function(i){ return i.src !== "gs"; });
+    gc.items.forEach(function(i){ course.items.push(i); added++; });
+  });
+  return { next: next, added: added, unmatched: unmatched };
+}
+
+/* Everything the app reads on launch, at once, with one reload at the end.
+   D2L, Gradescope and the calendar used to take turns: D2L landed and
+   reloaded the page, which restarted a 6-second Gradescope timer, whose
+   reload restarted a 9-second calendar timer — about 20 seconds and three
+   reloads before the page was whole. They are independent reads, so they now
+   run side by side and are folded into one dataset before anything reloads. */
+function launchRefresh(){
+  var ids = function(d){ return ((d && d.courses)||[]).map(function(c){ return c.id; }).filter(Boolean); };
+  var none = function(){ return null; };
+  var gsP  = window.owl.pullGradescope(false).then(null, none);
+  /* The calendar is read per course. On a first launch there are no courses
+     yet, so it has to wait for D2L to say what they are. */
+  var calP = ids(DATA).length ? window.owl.pullCalendar(ids(DATA)).then(null, none) : null;
+
+  window.owl.grab(false).then(null, none).then(function(d2l){
+    var fresh = d2l && d2l.ok && d2l.data && d2l.data.courses && d2l.data.courses.length;
+    if(d2l && d2l.needLogin) showSignInBar();
+    var base = fresh ? keepExtras(d2l.data, DATA) : JSON.parse(JSON.stringify(DATA));
+    if(!calP && ids(base).length) calP = window.owl.pullCalendar(ids(base)).then(null, none);
+
+    return Promise.all([gsP, calP]).then(function(r){
+      var next = base, gs = r[0], cal = r[1];
+      if(gs && gs.ok){
+        next = mergeGradescope(next, gs).next;
+        var st = load(K.gs,{}); st.lastPull = Date.now(); save(K.gs, st);
+      }
+      if(cal && cal.ok) next = mergeCalendar(next, cal).next;
+      /* Exams live only in the calendar, so a lapsed sign-in there is worth
+         saying out loud — unless the D2L bar already said it. */
+      else if(cal && cal.needLogin && !(d2l && d2l.needLogin)){
+        showSignInBar("Your exams live only in the D2L calendar, and Owl Hours can\u2019t read it until you sign in.");
+      }
+      markSession("owlhours.launch");
+      if(!sameData(next, DATA)){ save(K.data, next); location.reload(); }
+    });
   });
 }
 
@@ -1427,30 +1476,9 @@ function showSignInBar(note){
 if(DESKTOP){
   window.owl.onData(function(j){ applyData(j, null); });
   window.owl.onNeedLogin(function(){ showSignInBar(); });
-  /* Gradescope costs nothing to check, so keep it current without asking.
-     Silent on failure: a missing Gradescope sign-in is not worth a banner
-     when the user may not even have a class that uses it. */
-  /* The session flag is set when the pull actually starts, not when it is
-     scheduled. The D2L refresh reloads the page ~1.5s after launch; flagging
-     at schedule time meant that reload killed the timer AND left the flag set,
-     so neither this nor the calendar pull ever ran after a successful launch. */
-  setTimeout(function(){
-    if(ranThisSession("owlhours.gs.pulled")) return;
-    pullGradescope(false, null, function(){ markSession("owlhours.gs.pulled"); });
-  }, 6000);
-    /* Exams live only here, so this runs unattended like Gradescope — but it
-       must not fail silently the way that one does. A lapsed sign-in meant the
-       calendar pull returned "needs login", nobody was told, and an exam four
-       days out simply never appeared. Worth one banner. */
-    setTimeout(function(){
-      if(ranThisSession("owlhours.cal.pulled")) return;
-      pullCalendar(null, function(ok, needLogin){
-        markSession("owlhours.cal.pulled");
-        if(!ok && needLogin){
-          showSignInBar("Your exams live only in the D2L calendar, and Owl Hours can\u2019t read it until you sign in.");
-        }
-      });
-    }, 9000);
+  /* Launch-time reads are marked only once they FINISH: a reload partway
+     through (the user pressing Refresh, say) simply runs them again. */
+  if(!ranThisSession("owlhours.launch")) launchRefresh();
 }
 
 /* ---------- pulling data from a URL ---------- */
