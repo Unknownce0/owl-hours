@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, shell, Menu, ipcMain, powerMonitor } = require('electron');
 const path = require('path');
 const d2l = require('./d2l');
 const aleks = require('./aleks');
@@ -7,7 +7,10 @@ const calendar = require('./calendar');
 const updater = require('./updater');
 
 let mainWindow = null;
-const REFRESH_EVERY = 6 * 60 * 60 * 1000;   // re-check D2L every six hours
+// Kennesaw ends a D2L session after 8 hours without activity, and each quiet
+// refresh counts as activity, so checking well inside that keeps the session
+// alive for as long as the computer is awake.
+const REFRESH_EVERY = 2 * 60 * 60 * 1000;   // re-check D2L every two hours
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -257,6 +260,17 @@ app.whenReady().then(() => {
     /* Ask GitHub once per launch whether there is anything newer. */
     setTimeout(() => { updater.check(); }, 4000);
     setInterval(refreshQuietly, REFRESH_EVERY);
+    /* Timers stop while the computer sleeps, so a long sleep can outlast the
+       session. Check again on wake; if D2L lapsed, Microsoft usually signs
+       straight back in without asking. */
+    let lastWake = 0;
+    const onWake = () => {
+      if (Date.now() - lastWake < 60 * 1000) return;
+      lastWake = Date.now();
+      setTimeout(refreshQuietly, 15 * 1000);
+    };
+    powerMonitor.on('resume', onWake);
+    powerMonitor.on('unlock-screen', onWake);
   });
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

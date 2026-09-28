@@ -2028,7 +2028,12 @@ function showSignInBar(note){
 }
 
 if(DESKTOP){
-  window.owl.onData(function(j){ applyData(j, null); });
+  window.owl.onData(function(j){
+    applyData(j, null);
+    /* a later quiet refresh got in after all, so the sign-in warning is stale */
+    var sb = document.getElementById("u-signin");
+    if(sb) document.getElementById("updatebar").classList.add("hidden");
+  });
   window.owl.onNeedLogin(function(){ showSignInBar(); });
   /* Launch-time reads are marked only once they FINISH: a reload partway
      through (the user pressing Refresh, say) simply runs them again. */

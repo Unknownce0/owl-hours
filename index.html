@@ -436,7 +436,7 @@ details.br kbd{font-family:ui-monospace,Menlo,monospace;font-size:12px;border:1p
 "use strict";
 
 var DEFAULT_DATA = null;
-var APP_VERSION  = "2.2.0";
+var APP_VERSION  = "2.2.1";
 /* A personal build carries its own coursework. Downloading the public
    release would replace it with an empty one, so never offer that here. */
 var PERSONAL     = /*__PERSONAL__*/false;
@@ -2050,7 +2050,12 @@ function showSignInBar(note){
 }
 
 if(DESKTOP){
-  window.owl.onData(function(j){ applyData(j, null); });
+  window.owl.onData(function(j){
+    applyData(j, null);
+    /* a later quiet refresh got in after all, so the sign-in warning is stale */
+    var sb = document.getElementById("u-signin");
+    if(sb) document.getElementById("updatebar").classList.add("hidden");
+  });
   window.owl.onNeedLogin(function(){ showSignInBar(); });
   /* Launch-time reads are marked only once they FINISH: a reload partway
      through (the user pressing Refresh, say) simply runs them again. */
