@@ -8,6 +8,7 @@ const path = require('path');
 const HOME = 'https://kennesaw.view.usg.edu/d2l/home';
 const PARTITION = 'persist:d2l';
 const SCRAPER = fs.readFileSync(path.join(__dirname, 'grabber-return.js'), 'utf8');
+const SCANNER = fs.readFileSync(path.join(__dirname, 'scan-page.js'), 'utf8');
 
 const isD2L = (url) => /^https:\/\/[^/]*\.view\.usg\.edu\//.test(url);
 
@@ -152,6 +153,32 @@ async function grab(interactive, say = () => {}) {
   }
 }
 
+/* The smart scanner: reads announcements and course pages for deadlines D2L
+   never listed as real items. Silent only; it never opens a sign-in window. */
+async function scan(orgUnits) {
+  const ous = (orgUnits || []).map(String).filter((x) => /^\d+$/.test(x));
+  if (!ous.length) return { ok: true, results: [], stats: {} };
+  const win = new BrowserWindow({
+    show: false,
+    webPreferences: { partition: PARTITION, contextIsolation: true, nodeIntegration: false, sandbox: true }
+  });
+  try {
+    await loadAndWait(win, HOME);
+    if (!onD2LProper(await settle(win))) return { ok: false, needLogin: true };
+    const code = 'var OU_LIST = ' + JSON.stringify(ous) + ';\n' + SCANNER;
+    const raw = await Promise.race([
+      win.webContents.executeJavaScriptInIsolatedWorld(1, [{ code }]),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('the scan took too long')), 120000))
+    ]);
+    const j = JSON.parse(raw);
+    return { ok: true, results: j.results || [], stats: j.stats || {} };
+  } catch (e) {
+    return { ok: false, error: String(e && e.message ? e.message : e) };
+  } finally {
+    if (!win.isDestroyed()) win.destroy();
+  }
+}
+
 async function signOut() {
   await d2lSession().clearStorageData();
   return { ok: true };
@@ -165,4 +192,4 @@ async function forget(origin) {
   return { ok: true };
 }
 
-module.exports = { grab, signOut, forget };
+module.exports = { grab, scan, signOut, forget };

@@ -219,6 +219,11 @@ a.name:hover{text-decoration:underline}
 .srow .t{font-size:15px;line-height:21px;font-weight:600;color:var(--ink);text-decoration:none}
 .srow a.t:hover{text-decoration:underline}
 .srow .s{margin-top:2px;font-size:14px;line-height:20px;color:var(--ink-muted)}
+.side .found-h{margin-top:32px}
+.fq{margin:6px 0 0;font-size:13px;line-height:18px;color:var(--ink-muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.fq q{font-style:italic}
+.fb{display:flex;gap:4px;margin-top:8px}
+.btn.sm{height:30px;padding:0 12px;font-size:13px}
 .extra{margin-top:48px}
 .extra h2{margin-bottom:8px}
 .empty{padding:48px 16px;text-align:center}
@@ -436,7 +441,7 @@ details.br kbd{font-family:ui-monospace,Menlo,monospace;font-size:12px;border:1p
 "use strict";
 
 var DEFAULT_DATA = null;
-var APP_VERSION  = "2.2.1";
+var APP_VERSION  = "2.3.0";
 /* A personal build carries its own coursework. Downloading the public
    release would replace it with an empty one, so never offer that here. */
 var PERSONAL     = /*__PERSONAL__*/false;
@@ -449,7 +454,8 @@ var TERM_END   = new Date(2027,0,15).getTime();
 
 var K = {data:"owlhours.data.v1", done:"owlhours.done.v1", todos:"owlhours.todos.v1",
          whatif:"owlhours.whatif.v1", ui:"owlhours.ui.v1", sync:"owlhours.sync.v1",
-         upd:"owlhours.update.v1", aleks:"owlhours.aleks.v1", gs:"owlhours.gradescope.v1"};
+         upd:"owlhours.update.v1", aleks:"owlhours.aleks.v1", gs:"owlhours.gradescope.v1",
+         found:"owlhours.found.v1"};
 /* The degree planner was removed; clear what it stored. */
 try { localStorage.removeItem("owlhours.degree.v1"); } catch(e){}
 
@@ -603,8 +609,8 @@ items = [];
 buildModel();
 function allItems(){
   return items.concat(todos.map(function(t){
-    return { key:"todo|"+t.id, course:t.course||"", type:"todo", name:t.name,
-             due:t.due?new Date(t.due):null, opens:null, url:null, status:null,
+    return { key:"todo|"+t.id, course:t.course||"", type:"todo", name:t.name, exam:t.kind === "exam",
+             due:t.due?new Date(t.due):null, opens:null, url:t.url||null, status:null,
              points:null, stale:false, todo:true, tid:t.id };
   }));
 }
@@ -731,7 +737,7 @@ function examLike(it){
                        !/study guide|review|practice|set ?up|scratch/i.test(n));
 }
 function kindOf(it){
-  if(it.todo) return "todo";
+  if(it.todo) return it.exam ? "exam" : "todo";
   if(examLike(it)) return "exam";
   /* older rows carry the source only in their name */
   if(it.src === "aleks" || /\(ALEKS\)\s*$/.test(it.name||"")) return "aleks";
@@ -985,6 +991,19 @@ function renderAgenda(){
     var t2 = itemUrl(i) ? '<a class="t" href="'+esc(itemUrl(i))+'" target="_blank" rel="noopener">'+esc(i.name)+'</a>' : '<span class="t">'+esc(i.name)+'</span>';
     return '<div class="srow">'+capHTML(i,{size:"xs"})+'<div>'+t2+'<div style="margin-top:3px">'+courseTag(byId[i.course])+'</div><div class="s">'+esc(sub)+'</div></div></div>';
   }).join('') : '<p class="msg">No exams on your calendar yet.</p>';
+  var fl = foundList();
+  if(fl.length){
+    h += '<h2 class="label found-h">Found in your classes</h2><p class="msg" style="margin-top:4px">Mentioned in D2L, but not listed as work. Add what’s real.</p>';
+    h += fl.slice(0,6).map(function(x){
+      var r = x.r, pseudo = {course:r.ou, name:r.name, exam:r.kind === "exam", type:r.kind === "quiz" ? "quiz" : "assignment"};
+      var src = (r.src === "announcement" ? "Announcement: " : "Class page: ") + r.where;
+      var t2 = r.url ? '<a class="t" href="https://kennesaw.view.usg.edu'+esc(r.url)+'" target="_blank" rel="noopener">'+esc(r.name)+'</a>' : '<span class="t">'+esc(r.name)+'</span>';
+      return '<div class="srow">'+capHTML(pseudo,{size:"xs"})+'<div>'+t2+'<div style="margin-top:3px">'+courseTag(byId[r.ou])+'</div>'+
+        '<div class="s">'+esc(fmtDay(x.d,true))+' · '+(r.timed ? esc(fmtClock(x.d)) : "no time given")+'</div>'+
+        '<p class="fq"><q>'+esc(r.snippet)+'</q> '+esc(src)+'</p>'+
+        '<div class="fb"><button class="btn sm primary" data-fadd="'+esc(x.k)+'">Add</button><button class="btn sm text" data-fign="'+esc(x.k)+'">Ignore</button></div></div></div>';
+    }).join('');
+  }
   h += '</aside></div>';
   el.innerHTML = h;
 
@@ -994,6 +1013,14 @@ function renderAgenda(){
   if(q("wk-now")) q("wk-now").onclick = function(){ weekOffset = 0; vt(renderAgenda); };
   if(q("fold-t")) q("fold-t").onclick = function(){ foldOpen = !foldOpen; vt(renderAgenda); };
   if(q("tl-more")) q("tl-more").onclick = function(){ agendaAll = true; vt(renderAgenda); };
+  Array.prototype.forEach.call(el.querySelectorAll("[data-fadd]"), function(b){
+    b.onclick = function(){ addFound(this.getAttribute("data-fadd")); };
+  });
+  Array.prototype.forEach.call(el.querySelectorAll("[data-fign]"), function(b){
+    b.onclick = function(){
+      var st = foundState(); st.ignored[this.getAttribute("data-fign")] = 1; save(K.found, st); vt(renderAgenda);
+    };
+  });
   Array.prototype.forEach.call(el.querySelectorAll("[data-jump]"), function(b){
     b.onclick = function(){
       var k = +this.getAttribute("data-jump"), head = q("dh-"+k);
@@ -1571,6 +1598,14 @@ function renderSettings(){
        courses.map(function(c){
          return setRow('<span class="dotl" style="--c:'+c.color+'"><i></i>'+esc(c.code)+'</span>', esc(c.name), toggleHTML("class."+c.id, !ui.off[c.id], "Show "+c.code));
        }).join('')+'</section>';
+  if(DESKTOP){
+    var nIgn = Object.keys(foundState().ignored).length;
+    h += '<section><h2 class="label">Missed deadlines</h2>'+
+         setRow("Look through announcements and class pages", '<span id="scan-msg">'+esc(scanStatus())+'</span>',
+                '<button class="btn" id="scan-now">Look now</button>')+
+         (nIgn ? '<p style="margin:8px 0 0"><button class="btn text" id="scan-unignore">Show the '+nIgn+' you ignored again</button></p>' : '')+
+         '</section>';
+  }
   h += '<section><h2 class="label">Updates</h2>'+
        setRow("Owl Hours "+esc(APP_VERSION), DESKTOP ? '<span id="upd-msg">Updates arrive on their own; you’ll see a banner when one is ready.</span>' : 'The web version updates itself when you reload.',
               DESKTOP ? '<button class="btn" id="upd-check">Check for updates</button>' : '')+'</section>';
@@ -1599,6 +1634,18 @@ function renderSettings(){
       save(K.ui, ui); renderSettings();
     };
   });
+  var sn = document.getElementById("scan-now");
+  if(sn) sn.onclick = function(){
+    var b = this, m = document.getElementById("scan-msg");
+    b.disabled = true; b.textContent = "Looking…"; m.textContent = "Looking through your classes…";
+    runScan(true, function(r){
+      if(ui.view !== "settings") return;
+      b.disabled = false; b.textContent = "Look now";
+      m.textContent = r && !r.ok ? (r.needLogin ? "Sign in to D2L first, then try again." : "Couldn’t finish: "+(r.error||"unknown error")) : scanStatus();
+    });
+  };
+  var su = document.getElementById("scan-unignore");
+  if(su) su.onclick = function(){ var st = foundState(); st.ignored = {}; save(K.found, st); renderSettings(); };
   var uc = document.getElementById("upd-check");
   if(uc) uc.onclick = function(){
     var b = this, m = document.getElementById("upd-msg");
@@ -2025,6 +2072,89 @@ function offerAleks(){
   }).catch(function(){});
 }
 
+/* ---------- the smart scanner ----------
+   Announcements and class pages often mention work D2L never lists as a real
+   item ("Lab 6 and Assignment 3 are due on Oct 4"). The desktop app reads
+   them now and then, and anything with a date that Owl Hours doesn't already
+   know about is offered in the Agenda for the user to add or ignore. */
+var SCAN_EVERY = 12*36e5, scanning = false;
+function foundState(){ var st = load(K.found,{}); st.results = st.results||[]; st.ignored = st.ignored||{}; return st; }
+function fnorm(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").replace(/\b0+(\d)/g,"$1").trim(); }
+/* numbered work ("Quiz 3") is one thing however often it's mentioned;
+   a bare "Essay Type Quiz" is told apart by its day */
+function foundKey(r){ return r.ou+"|"+fnorm(r.name)+(/\d/.test(r.name) ? "" : "|"+new Date(r.d).toDateString()); }
+/* CSE 1321 announcements talk about CSE 1321L's labs */
+function siblingCourse(a, b){
+  if(a === b) return true;
+  var ca = byId[a], cb = byId[b];
+  return !!(ca && cb && ca.code.replace(/[A-Z]$/,"") === cb.code.replace(/[A-Z]$/,""));
+}
+var FOUND_FITS = {exam:["exam","quiz"], quiz:["quiz","exam"],
+                  assignment:["assignment","gradescope","aleks","todo"], project:["assignment","gradescope","todo"]};
+var NUMBERED = /\b(assignment|lab|quiz|test|exam|homework|hw|project|problem set|module|chapter|unit)\s*#?\s*\d+/i;
+function knownAlready(r, all){
+  var d = Date.parse(r.d), key = " "+fnorm(r.name)+" ", numbered = /\d/.test(r.name);
+  return all.some(function(i){
+    if(!siblingCourse(r.ou, i.course)) return false;
+    if(numbered && (" "+fnorm(i.name)+" ").indexOf(key) >= 0) return true;
+    /* same day and same sort of work is the same thing, unless both carry their
+       own number: "Lab 6" is not "Assignment 3" just because both are due Sunday */
+    if(numbered && NUMBERED.test(i.name)) return false;
+    return !!(i.due && Math.abs(i.due.getTime() - d) < 36*36e5 && FOUND_FITS[r.kind].indexOf(kindOf(i)) >= 0);
+  });
+}
+function foundList(){
+  if(!DESKTOP) return [];
+  var st = foundState(), all = allItems(), best = {};
+  st.results.forEach(function(r){
+    if(!byId[r.ou] || ui.off[r.ou] || !FOUND_FITS[r.kind]) return;
+    var d = new Date(r.d);
+    if(isNaN(d) || d.getTime() < TODAY || d.getTime() > TERM_END) return;
+    var k = foundKey(r);
+    if(st.ignored[k] || todos.some(function(t){ return t.foundKey === k; })) return;
+    var b = best[k];
+    /* the mention with a time wins; otherwise the latest date (a window's close) */
+    if(!b || (r.timed && !b.timed) || (!!r.timed === !!b.timed && d > new Date(b.d))) best[k] = r;
+  });
+  return Object.keys(best).map(function(k){ return {k:k, r:best[k], d:new Date(best[k].d)}; })
+    .filter(function(x){ return !knownAlready(x.r, all); })
+    .sort(function(a,b){ return a.d - b.d; });
+}
+function addFound(k){
+  var x = foundList().filter(function(f){ return f.k === k; })[0];
+  if(!x) return;
+  todos.push({ id:Date.now().toString(36), name:x.r.name, course:x.r.ou, due:x.r.d, kind:x.r.kind, foundKey:k,
+               url: x.r.url ? "https://kennesaw.view.usg.edu"+x.r.url : null });
+  save(K.todos, todos);
+  vt(renderAgenda);
+}
+function runScan(force, done){
+  done = done || function(){};
+  if(!DESKTOP || !window.owl.scanCourses || scanning || isEmpty) return done(null);
+  var st = foundState();
+  if(!force && st.at && Date.now() - st.at < SCAN_EVERY) return done(null);
+  scanning = true;
+  window.owl.scanCourses(courses.map(function(c){ return c.id; })).then(function(r){
+    scanning = false;
+    st = foundState();
+    if(r && r.ok){ st.results = r.results; st.stats = r.stats; st.at = Date.now(); st.err = null; }
+    else st.err = r && r.needLogin ? "signin" : (r && r.error) || "failed";
+    save(K.found, st);
+    if(r && r.ok && ui.view === "agenda") show("agenda", true);
+    done(r);
+  }).catch(function(e){ scanning = false; done({ok:false, error:String(e)}); });
+}
+function scanStatus(){
+  var st = foundState();
+  if(scanning) return "Looking through your classes…";
+  if(!st.at) return st.err === "signin" ? "Sign in to D2L first." : "Hasn’t looked yet. It runs on its own a little after Owl Hours opens.";
+  var mins = Math.round((Date.now() - st.at)/6e4);
+  var ago = mins < 1 ? "just now" : mins < 60 ? mins+" min ago" : mins < 1440 ? Math.round(mins/60)+" hr ago" : Math.round(mins/1440)+" days ago";
+  var s = st.stats || {}, n = foundList().length;
+  return "Last looked "+ago+": "+(s.announcements||0)+" announcements and "+(s.pages||0)+" class pages. "+
+         (n ? n+" possible "+(n === 1 ? "deadline" : "deadlines")+" in your Agenda." : "Nothing missed.");
+}
+
 /* When Kennesaw's sign-in lapses the app can't see new work. Say so plainly
    rather than sitting there looking up to date, and put the fix one click away. */
 function showSignInBar(note){
@@ -2060,6 +2190,8 @@ if(DESKTOP){
   /* Launch-time reads are marked only once they FINISH: a reload partway
      through (the user pressing Refresh, say) simply runs them again. */
   if(!ranThisSession("owlhours.launch")) launchRefresh();
+  /* after the launch refresh has had time to land */
+  setTimeout(function(){ runScan(false); }, 25000);
 }
 
 /* ---------- pulling data from a URL ---------- */

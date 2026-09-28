@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('owl', {
   onNeedLogin: (cb) => ipcRenderer.on('owl:needlogin', () => cb()),
   pullAleks: (courseIds) => ipcRenderer.invoke('owl:aleks', courseIds),
   checkAleks: (courseIds) => ipcRenderer.invoke('owl:alekscheck', courseIds),
+  scanCourses: (orgUnits) => ipcRenderer.invoke('owl:scan', orgUnits),
   pullGradescope: (interactive) => ipcRenderer.invoke('owl:gradescope', interactive),
   pullCalendar: (orgUnits) => ipcRenderer.invoke('owl:calendar', orgUnits),
   /* Updates: check, then download and install only when asked. */
