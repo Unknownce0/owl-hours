@@ -9,6 +9,7 @@ const HOME = 'https://kennesaw.view.usg.edu/d2l/home';
 const PARTITION = 'persist:d2l';
 const SCRAPER = fs.readFileSync(path.join(__dirname, 'grabber-return.js'), 'utf8');
 const SCANNER = fs.readFileSync(path.join(__dirname, 'scan-page.js'), 'utf8');
+const deadlines = require('./deadlines');
 
 const isD2L = (url) => /^https:\/\/[^/]*\.view\.usg\.edu\//.test(url);
 
@@ -171,7 +172,7 @@ async function scan(orgUnits) {
       new Promise((_, rej) => setTimeout(() => rej(new Error('the scan took too long')), 120000))
     ]);
     const j = JSON.parse(raw);
-    return { ok: true, results: j.results || [], stats: j.stats || {} };
+    return { ok: true, results: deadlines.analyze(j.docs || []), stats: j.stats || {} };
   } catch (e) {
     return { ok: false, error: String(e && e.message ? e.message : e) };
   } finally {

@@ -119,7 +119,7 @@ select.inp{padding-right:12px}
 .course{display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px;font-weight:500;color:var(--ink-muted);white-space:nowrap}
 .course::before{content:"";width:8px;height:8px;border-radius:999px;background:var(--c,var(--ink-muted));flex:none}
 .status{font-size:12px;line-height:16px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-muted);white-space:nowrap}
-.status.late{color:var(--late)} .status.exam{color:var(--moon)} .status.done{color:var(--done)}
+.status.late{color:var(--late)} .status.exam{color:var(--moon)} .status.done{color:var(--done)} .status.hot{color:var(--lamp)}
 .cap{flex:none;width:44px;height:44px;border-radius:999px;background:var(--c,var(--rule-strong));color:var(--on-course);display:grid;place-items:center}
 .cap svg{width:22px;height:22px}
 .cap.sm{width:36px;height:36px}.cap.sm svg{width:18px;height:18px}
@@ -971,15 +971,24 @@ function renderAgenda(){
   }).join('') : '<p class="msg">No exams on your calendar yet.</p>';
   var fl = foundList();
   if(fl.length){
-    h += '<h2 class="label found-h">Found in your classes</h2><p class="msg" style="margin-top:4px">Mentioned in D2L, but not listed as work. Add what’s real.</p>';
+    h += '<h2 class="label found-h">From your teachers</h2><p class="msg" style="margin-top:4px">Things announcements and class pages say that D2L doesn’t show.</p>';
     h += fl.slice(0,6).map(function(x){
-      var r = x.r, pseudo = {course:r.ou, name:r.name, exam:r.kind === "exam", type:r.kind === "quiz" ? "quiz" : "assignment"};
+      var r = x.r, j = x.j, it = j.item;
+      var shown = j.type === "found" ? {course:r.ou, name:r.name, exam:workType(r.name) === "exam", type:workType(r.name) === "quiz" ? "quiz" : "assignment"} : (it || {course:r.ou, name:r.name, type:"quiz"});
+      var title = j.type === "found" ? r.name : (it ? it.name : r.name);
+      var href = it && itemUrl(it) ? itemUrl(it) : r.url ? "https://kennesaw.view.usg.edu"+r.url : null;
+      var when = esc(fmtDay(x.d,true))+(j.timed ? " · "+esc(fmtClock(x.d)) : "");
+      var line;
+      if(j.type === "differs") line = '<div class="s"><span class="status hot">Date differs</span></div>'+
+        '<div class="s">Your teacher says <b>'+when+'</b>'+(it.due ? ' · D2L says '+esc(fmtDay(it.due,true)) : ' · D2L gives no date')+'</div>';
+      else if(j.type === "before") line = '<div class="s"><span class="status hot">Do first</span></div>'+
+        '<div class="s">Before '+esc(j.target.name)+', '+when+'</div>';
+      else line = '<div class="s">'+esc(fmtDay(x.d,true))+' · '+(j.timed ? esc(fmtClock(x.d)) : "no time given")+'</div>';
       var src = (r.src === "announcement" ? "Announcement: " : "Class page: ") + r.where;
-      var t2 = r.url ? '<a class="t" href="https://kennesaw.view.usg.edu'+esc(r.url)+'" target="_blank" rel="noopener">'+esc(r.name)+'</a>' : '<span class="t">'+esc(r.name)+'</span>';
-      return '<div class="srow">'+capHTML(pseudo,{size:"xs"})+'<div>'+t2+'<div style="margin-top:3px">'+courseTag(byId[r.ou])+'</div>'+
-        '<div class="s">'+esc(fmtDay(x.d,true))+' · '+(r.timed ? esc(fmtClock(x.d)) : "no time given")+'</div>'+
+      var t2 = href ? '<a class="t" href="'+esc(href)+'" target="_blank" rel="noopener">'+esc(title)+'</a>' : '<span class="t">'+esc(title)+'</span>';
+      return '<div class="srow">'+capHTML(shown,{size:"xs"})+'<div>'+t2+'<div style="margin-top:3px">'+courseTag(byId[r.ou])+'</div>'+line+
         '<p class="fq"><q>'+esc(r.snippet)+'</q> '+esc(src)+'</p>'+
-        '<div class="fb"><button class="btn sm primary" data-fadd="'+esc(x.k)+'">Add</button><button class="btn sm text" data-fign="'+esc(x.k)+'">Ignore</button></div></div></div>';
+        '<div class="fb"><button class="btn sm primary" data-fadd="'+esc(x.k)+'">'+(j.type === "found" ? "Add" : "Add to Agenda")+'</button><button class="btn sm text" data-fign="'+esc(x.k)+'">Ignore</button></div></div></div>';
     }).join('');
   }
   h += '</aside></div>';
@@ -2058,50 +2067,125 @@ function offerAleks(){
 var SCAN_EVERY = 12*36e5, scanning = false;
 function foundState(){ var st = load(K.found,{}); st.results = st.results||[]; st.ignored = st.ignored||{}; return st; }
 function fnorm(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").replace(/\b0+(\d)/g,"$1").trim(); }
-/* numbered work ("Quiz 3") is one thing however often it's mentioned;
-   a bare "Essay Type Quiz" is told apart by its day */
-function foundKey(r){ return r.ou+"|"+fnorm(r.name)+(/\d/.test(r.name) ? "" : "|"+new Date(r.d).toDateString()); }
+/* one card per item and date: a later announcement moving it again is a new card */
+function foundKey(r, j){
+  var who = j && j.item ? j.item.key : fnorm(r.name);
+  return r.ou+"|"+j.type+"|"+who+"|"+j.d.toDateString();
+}
 /* CSE 1321 announcements talk about CSE 1321L's labs */
 function siblingCourse(a, b){
   if(a === b) return true;
   var ca = byId[a], cb = byId[b];
   return !!(ca && cb && ca.code.replace(/[A-Z]$/,"") === cb.code.replace(/[A-Z]$/,""));
 }
-var FOUND_FITS = {exam:["exam","quiz"], quiz:["quiz","exam"],
-                  assignment:["assignment","gradescope","aleks","todo"], project:["assignment","gradescope","todo"]};
-var NUMBERED = /\b(assignment|lab|quiz|test|exam|homework|hw|project|problem set|module|chapter|unit)\s*#?\s*\d+/i;
-function knownAlready(r, all){
-  var d = Date.parse(r.d), key = " "+fnorm(r.name)+" ", numbered = /\d/.test(r.name);
-  return all.some(function(i){
+/* what sort of work a name describes, for the same-day fallback */
+function workType(name){
+  var n = String(name||"").toLowerCase();
+  if(/exam|midterm|test\b/.test(n)) return "exam";
+  if(/quiz/.test(n)) return "quiz";
+  if(/discussion|post\b|repl/.test(n)) return "discussion";
+  return "assignment";
+}
+var FOUND_FITS = {exam:["exam","quiz"], quiz:["quiz","exam"], discussion:["discussion"],
+                  assignment:["assignment","gradescope","aleks","todo","discussion"]};
+var NUMBERED = /\b(assignment|lab|quiz|test|exam|homework|hw|project|problem set|module|chapter|unit|week)\s*#?\s*\d+/i;
+/* words that say nothing about which item is meant */
+var FILLER = {the:1,a:1,an:1,of:1,for:1,and:1,to:1,in:1,on:1,your:1,my:1,our:1};
+function stem(w){ return w.replace(/ies$/,"y").replace(/zzes$/,"z").replace(/([^s])s$/,"$1"); }
+function toks(name){
+  return fnorm(String(name||"").replace(/\bset\s*up\b/ig,"setup")).split(" ")
+    .filter(function(w){ return w && !FILLER[w]; }).map(stem);
+}
+/* the user's items a mention could be talking about: every word of the
+   mention appears in the item's name ("Movement Activity" → "Week 7 Movement
+   Activity: Social Dance"), in the same class or its lab/lecture twin */
+function matchesFor(r, name, all){
+  var want = toks(name);
+  if(!want.length) return [];
+  return all.filter(function(i){
     if(!siblingCourse(r.ou, i.course)) return false;
-    if(numbered && (" "+fnorm(i.name)+" ").indexOf(key) >= 0) return true;
-    /* same day and same sort of work is the same thing, unless both carry their
-       own number: "Lab 6" is not "Assignment 3" just because both are due Sunday */
-    if(numbered && NUMBERED.test(i.name)) return false;
-    return !!(i.due && Math.abs(i.due.getTime() - d) < 36*36e5 && FOUND_FITS[r.kind].indexOf(kindOf(i)) >= 0);
+    var have = toks(i.name);
+    return want.every(function(w){ return have.indexOf(w) >= 0; });
   });
+}
+/* "your first Movement Activity" is the earliest of them, "the next" the first
+   still ahead of the post, and a plain mention whichever date is nearest */
+function pickMatch(list, r){
+  if(!list.length) return null;
+  var dated = list.filter(function(i){ return i.due; }).sort(function(a,b){ return a.due - b.due; });
+  if(typeof r.ordinal === "number") return dated[r.ordinal - 1] || null;
+  if(r.ordinal === "last") return dated[dated.length - 1] || null;
+  if(r.ordinal === "next"){
+    var p = r.posted ? Date.parse(r.posted) : Date.now();
+    return dated.filter(function(i){ return i.due.getTime() >= p; })[0] || null;
+  }
+  if(!r.d){
+    /* no date to compare: the next one coming up, else whatever there is */
+    return dated.filter(function(i){ return i.due.getTime() >= TODAY; })[0] || list[0];
+  }
+  var t = Date.parse(r.d);
+  return list.slice().sort(function(a,b){
+    return (a.due ? Math.abs(a.due - t) : 9e15) - (b.due ? Math.abs(b.due - t) : 9e15);
+  })[0];
+}
+/* Sort each mention into: already known (dropped), new work ("found"), a date
+   that disagrees with D2L ("differs"), or a task due before another ("before"). */
+function judge(r, all){
+  var near = 36*36e5;
+  if(r.kind === "before"){
+    var target = pickMatch(matchesFor(r, r.before, all), {});
+    if(!target || !target.due || target.due.getTime() < TODAY) return null;
+    var task = pickMatch(matchesFor(r, r.name, all), {});
+    if(task && (isDone(task) || (task.due && task.due <= target.due))) return null;
+    return {type:"before", item:task, target:target, d:target.due, timed:!target.allDay};
+  }
+  var d = new Date(r.d);
+  if(isNaN(d) || d.getTime() < TODAY || d.getTime() > TERM_END) return null;
+  var m = pickMatch(matchesFor(r, r.name, all), r);
+  if(m){
+    if(isDone(m)) return null;
+    if(m.due && Math.abs(m.due.getTime() - d.getTime()) <= near) return {type:"known", item:m};
+    return {type:"differs", item:m, d:d, timed:!!r.timed};
+  }
+  /* no item by that name: something D2L lists on that day of the same sort
+     is probably it, unless both carry their own number ("Lab 6" ≠ "Assignment 3") */
+  var wt = workType(r.name), numbered = /\d/.test(r.name);
+  var same = all.some(function(i){
+    if(!siblingCourse(r.ou, i.course) || !i.due) return false;
+    if(numbered && NUMBERED.test(i.name)) return false;
+    return Math.abs(i.due.getTime() - d.getTime()) <= near && FOUND_FITS[wt].indexOf(kindOf(i)) >= 0;
+  });
+  return same ? null : {type:"found", d:d, timed:!!r.timed};
 }
 function foundList(){
   if(!DESKTOP) return [];
   var st = foundState(), all = allItems(), best = {};
-  st.results.forEach(function(r){
-    if(!byId[r.ou] || ui.off[r.ou] || !FOUND_FITS[r.kind]) return;
-    var d = new Date(r.d);
-    if(isNaN(d) || d.getTime() < TODAY || d.getTime() > TERM_END) return;
-    var k = foundKey(r);
+  var judged = st.results.filter(function(r){ return byId[r.ou] && !ui.off[r.ou] && r.name; })
+                         .map(function(r){ return {r:r, j:judge(r, all)}; });
+  /* a post that also gives D2L's date for the same item isn't contradicting it:
+     "Test 1 – week of Sept 28 through Oct 4" in the title, "Oct 6 at 2:20" below */
+  var agrees = {};
+  judged.forEach(function(x){ if(x.j && x.j.type === "known") agrees[x.r.where+"|"+x.j.item.key] = 1; });
+  judged.forEach(function(x){
+    var r = x.r, j = x.j;
+    if(!j || j.type === "known") return;
+    if(j.type === "differs" && agrees[r.where+"|"+j.item.key]) return;
+    var k = foundKey(r, j);
     if(st.ignored[k] || todos.some(function(t){ return t.foundKey === k; })) return;
     var b = best[k];
-    /* the mention with a time wins; otherwise the latest date (a window's close) */
-    if(!b || (r.timed && !b.timed) || (!!r.timed === !!b.timed && d > new Date(b.d))) best[k] = r;
+    /* the newest post wins: announcements correct each other */
+    if(!b || (r.posted || "") > (b.r.posted || "") || (r.timed && !b.r.timed)) best[k] = {k:k, r:r, j:j, d:j.d};
   });
-  return Object.keys(best).map(function(k){ return {k:k, r:best[k], d:new Date(best[k].d)}; })
-    .filter(function(x){ return !knownAlready(x.r, all); })
-    .sort(function(a,b){ return a.d - b.d; });
+  return Object.keys(best).map(function(k){ return best[k]; })
+    .sort(function(a,b){ return (a.j.type === "found") - (b.j.type === "found") || a.d - b.d; });
 }
 function addFound(k){
   var x = foundList().filter(function(f){ return f.k === k; })[0];
   if(!x) return;
-  todos.push({ id:Date.now().toString(36), name:x.r.name, course:x.r.ou, due:x.r.d, kind:x.r.kind, foundKey:k,
+  var nm = x.j.item ? x.j.item.name : x.r.name;
+  if(x.j.type === "before") nm += " (before " + x.j.target.name + ")";
+  todos.push({ id:Date.now().toString(36), name:nm, course:x.r.ou, due:x.d.toISOString(),
+               kind:x.j.type === "found" ? workType(x.r.name) : null, foundKey:k,
                url: x.r.url ? "https://kennesaw.view.usg.edu"+x.r.url : null });
   save(K.todos, todos);
   vt(renderAgenda);
@@ -2110,12 +2194,13 @@ function runScan(force, done){
   done = done || function(){};
   if(!DESKTOP || !window.owl.scanCourses || scanning || isEmpty) return done(null);
   var st = foundState();
-  if(!force && st.at && Date.now() - st.at < SCAN_EVERY) return done(null);
+  /* results from an older reader are redone at once rather than in 12 hours */
+  if(!force && st.at && st.v === 2 && Date.now() - st.at < SCAN_EVERY) return done(null);
   scanning = true;
   window.owl.scanCourses(courses.map(function(c){ return c.id; })).then(function(r){
     scanning = false;
     st = foundState();
-    if(r && r.ok){ st.results = r.results; st.stats = r.stats; st.at = Date.now(); st.err = null; }
+    if(r && r.ok){ st.results = r.results; st.stats = r.stats; st.at = Date.now(); st.err = null; st.v = 2; }
     else st.err = r && r.needLogin ? "signin" : (r && r.error) || "failed";
     save(K.found, st);
     if(r && r.ok && ui.view === "agenda") show("agenda", true);
@@ -2130,7 +2215,7 @@ function scanStatus(){
   var ago = mins < 1 ? "just now" : mins < 60 ? mins+" min ago" : mins < 1440 ? Math.round(mins/60)+" hr ago" : Math.round(mins/1440)+" days ago";
   var s = st.stats || {}, n = foundList().length;
   return "Last looked "+ago+": "+(s.announcements||0)+" announcements and "+(s.pages||0)+" class pages. "+
-         (n ? n+" possible "+(n === 1 ? "deadline" : "deadlines")+" in your Agenda." : "Nothing missed.");
+         (n ? n+" "+(n === 1 ? "thing" : "things")+" D2L doesn’t show, in your Agenda." : "Nothing D2L is missing.");
 }
 
 /* When Kennesaw's sign-in lapses the app can't see new work. Say so plainly
