@@ -433,7 +433,7 @@ var TERM_END   = new Date(2027,0,15).getTime();
 var K = {data:"owlhours.data.v1", done:"owlhours.done.v1", todos:"owlhours.todos.v1",
          whatif:"owlhours.whatif.v1", ui:"owlhours.ui.v1", sync:"owlhours.sync.v1",
          upd:"owlhours.update.v1", aleks:"owlhours.aleks.v1", gs:"owlhours.gradescope.v1",
-         found:"owlhours.found.v1"};
+         found:"owlhours.found.v1", src:"owlhours.sources.v1"};
 /* The degree planner was removed; clear what it stored. */
 try { localStorage.removeItem("owlhours.degree.v1"); } catch(e){}
 
@@ -942,7 +942,7 @@ function renderAgenda(){
 
   if(!tl){
     h += '<div class="empty"><h2>'+(overdue.length ? "" : "All caught up.")+'</h2><p>Nothing left on your timeline'+
-         (DESKTOP ? '. Owl Hours checks D2L again every 6 hours.' : '.')+'</p></div>';
+         (DESKTOP ? '. Owl Hours checks D2L again every 2 hours.' : '.')+'</p></div>';
   } else {
     h += '<section aria-label="Timeline"><ol class="tl">'+tl+'</ol></section>';
     if(hiddenLater) h += '<p style="margin:24px 0 0 60px"><button class="btn" id="tl-more">Show '+hiddenLater+' more after '+esc(fmtDay(new Date(LIMIT)))+'</button></p>';
@@ -1398,33 +1398,68 @@ function renderSync(){
           'Disconnecting a source removes its work from Owl Hours and stops it being read.</p><div style="margin-top:16px">';
   var ON = "var(--done)", OFF = "var(--ink-muted)";
   if(DESKTOP){
+    var WARN = "var(--lamp)";
     var d2lAt = DATA.scrapedAt ? Date.parse(DATA.scrapedAt) : null;
-    h += source({id:"d2l", title:"D2L", color: isEmpty ? OFF : ON, state: isEmpty ? "Not connected" : "Connected",
+    var sd = sourceState("d2l"), d2lOut = !isEmpty && sd.state === "signin";
+    h += source({id:"d2l", title:"D2L", color: isEmpty ? OFF : d2lOut ? WARN : ON,
+      state: isEmpty ? "Not connected" : d2lOut ? "Signed out" : "Connected",
       lines:["Assignments, quizzes, discussions, grades and announcements for "+(courses.length ? "all "+courses.length+" classes" : "your classes")+".",
-             d2lAt ? "Last refreshed "+esc(ago(d2lAt))+". Owl Hours checks again every 6 hours." : "Not read yet."],
-      actions: isEmpty ? '<button class="btn primary" id="d-refresh">Sign in to D2L</button>'
-                       : '<button class="btn" id="d-refresh">Refresh now</button><button class="btn text" id="d-off">Disconnect</button>'});
-    var al = alekpState(), aleksCourses = courses.filter(function(c){
-      return allItems().some(function(i){ return i.course === c.id && i.src === "aleks"; });
+             d2lOut ? "Your Kennesaw sign-in ran out, so Owl Hours can’t see new work."+(d2lAt ? " Last refreshed "+esc(ago(d2lAt))+"." : "")
+                    : d2lAt ? "Last refreshed "+esc(ago(d2lAt))+". Owl Hours checks again every 2 hours." : "Not read yet."],
+      actions: isEmpty || d2lOut ? '<button class="btn primary" id="d-refresh">Sign in to D2L</button>'+(isEmpty ? '' : '<button class="btn text" id="d-off">Disconnect</button>')
+                                 : '<button class="btn" id="d-refresh">Refresh now</button><button class="btn text" id="d-off">Disconnect</button>'});
+
+    /* ALEKS is only worth a card state when a class actually uses it */
+    var al = alekpState(), sa = sourceState("aleks"), aleksCourses = courses.filter(function(c){
+      return allItems().some(function(i){ return i.course === c.id && i.src === "aleks"; }) || (al.links && al.links[c.id]);
     }).map(function(c){ return c.code; });
-    h += source({id:"aleks", title:"ALEKS", color: ui.aleksOff ? OFF : al.lastPull ? ON : OFF,
-      state: ui.aleksOff ? "Disconnected" : "Pull by hand",
+    var aState = ui.aleksOff ? ["Disconnected", OFF]
+      : sa.state === "error" && (!al.lastPull || sa.at > al.lastPull) ? ["Couldn’t read", WARN]
+      : al.lastPull ? ["Pulled", ON]
+      : aleksCourses.length ? ["Not pulled yet", OFF] : ["Not used", OFF];
+    h += source({id:"aleks", title:"ALEKS", color:aState[1], state:aState[0],
       lines:["D2L can’t see ALEKS, so pull it after you work on a module.",
-             (aleksCourses.length ? "Used by "+esc(aleksCourses.join(", "))+". " : "")+esc(alekpAgeText())],
+             (aleksCourses.length ? "Used by "+esc(aleksCourses.join(", "))+". " : "None of your classes use it so far. ")+
+             (al.lastPull ? esc(alekpAgeText()) : "")+(aState[0] === "Couldn’t read" && sa.err ? " "+esc(sa.err) : "")],
       extra:'<p class="callout"><b>It signs you out of ALEKS everywhere else.</b> ALEKS allows one session at a time, so this only runs when you press it. Finish what you’re doing in ALEKS first.</p>',
-      actions:'<button class="btn" id="a-pull">Pull my ALEKS work</button>'+(ui.aleksOff ? '' : '<button class="btn text" id="a-off">Disconnect</button>')});
-    var gs = load(K.gs,{});
-    h += source({id:"gs", title:"Gradescope", color: ui.gsOff ? OFF : ON, state: ui.gsOff ? "Disconnected" : "Reading",
-      lines:["Scores for classes that grade in Gradescope instead of D2L.",
-             ui.gsOff ? "Turned off. Owl Hours won’t read it until you connect it again."
-                      : "Read automatically with every refresh. "+(gs.lastPull ? "Last read "+esc(ago(gs.lastPull))+"." : "Not read yet.")],
-      actions: ui.gsOff ? '<button class="btn" id="g-pull">Connect</button>'
-                        : '<button class="btn" id="g-pull">Read now</button><button class="btn text" id="g-off">Disconnect</button>'});
-    h += source({id:"cal", title:"D2L calendar", color: ui.calOff ? OFF : ON, state: ui.calOff ? "Off" : "Reading",
+      actions:'<button class="btn" id="a-pull">Pull my ALEKS work</button>'+(ui.aleksOff || !al.lastPull ? '' : '<button class="btn text" id="a-off">Disconnect</button>')});
+
+    /* Gradescope only counts as connected once a read has actually worked;
+       older installs that have Gradescope rows but no record yet count too */
+    var gs = load(K.gs,{}), sg = sourceState("gs");
+    var gsRows = allItems().some(function(i){ return i.src === "gs"; });
+    var gState = ui.gsOff ? "off"
+      : sg.state === "ok" || (!sg.state && gsRows) ? "ok"
+      : sg.state === "signin" ? (gs.lastPull || gsRows ? "out" : "never")
+      : sg.state === "none" ? "none"
+      : sg.state === "error" ? "error" : "never";
+    var gLook = {off:["Disconnected",OFF], ok:["Connected",ON], out:["Signed out",WARN], never:["Not connected",OFF],
+                 none:["No classes",OFF], error:["Couldn’t read",WARN]}[gState];
+    var gLine = {off:"Turned off. Owl Hours won’t read it until you connect it again.",
+                 ok:"Read automatically with every refresh. "+(gs.lastPull ? "Last read "+esc(ago(gs.lastPull))+"." : ""),
+                 out:"Your Gradescope sign-in ran out. Connect again to keep its scores coming in.",
+                 never:"Not connected. Connect it if any class uses Gradescope; otherwise you can leave this alone.",
+                 none:"You’re signed in, but Gradescope has no classes for you.",
+                 error:"The last read failed: "+esc(sg.err || "unknown problem")+"."}[gState];
+    h += source({id:"gs", title:"Gradescope", color:gLook[1], state:gLook[0],
+      lines:["Scores for classes that grade in Gradescope instead of D2L.", gLine],
+      actions: gState === "ok" || gState === "none" || gState === "error"
+        ? '<button class="btn" id="g-pull">Read now</button><button class="btn text" id="g-off">Disconnect</button>'
+        : '<button class="btn'+(gState === "out" ? ' primary' : '')+'" id="g-pull">Connect</button>'});
+
+    /* the calendar is read through D2L, so it's only as connected as D2L is */
+    var sc = sourceState("cal");
+    var cState = ui.calOff ? ["Off",OFF] : isEmpty || d2lOut ? ["Waiting on D2L",OFF]
+      : sc.state === "error" ? ["Couldn’t read",WARN] : sc.state === "signin" ? ["Waiting on D2L",OFF]
+      : sc.okAt ? ["Reading",ON] : ["Not read yet",OFF];
+    h += source({id:"cal", title:"D2L calendar", color:cState[1], state:cState[0],
       lines:["Sit-down exams and events that only exist on your course calendars.",
-             ui.calOff ? "Turned off. Exams that live only on the calendar won’t show up." : "Read automatically with every refresh."],
+             ui.calOff ? "Turned off. Exams that live only on the calendar won’t show up."
+             : cState[0] === "Waiting on D2L" ? "Read once you’re signed in to D2L."
+             : cState[0] === "Couldn’t read" ? "The last read failed: "+esc(sc.err || "unknown problem")+"."
+             : "Read automatically with every refresh."+(sc.okAt ? " Last read "+esc(ago(sc.okAt))+"." : "")],
       actions: ui.calOff ? '<button class="btn" id="c-pull">Turn on</button>'
-                         : '<button class="btn" id="c-pull">Read now</button><button class="btn text" id="c-off">Turn off</button>'});
+                         : '<button class="btn" id="c-pull"'+(isEmpty ? ' disabled' : '')+'>Read now</button><button class="btn text" id="c-off">Turn off</button>'});
   } else {
     var when = DATA.scrapedAt ? Date.parse(DATA.scrapedAt) : null;
     h += '<section class="src"><div style="min-width:0"><div class="ttl"><b>Load your own classes</b>'+
@@ -1767,6 +1802,7 @@ function desktopGrab(interactive, note){
   if(!DESKTOP) return;
   if(note) note(interactive ? "Opening D2L\u2026" : "Checking D2L\u2026");
   window.owl.grab(interactive).then(function(res){
+    noteSource("d2l", res);
     if(res && res.ok){ applyData(res.data, note); return; }
     if(res && res.needLogin){
       if(note) note(interactive ? "Sign-in didn\u2019t finish. Try again." : "You\u2019re signed out of D2L \u2014 press Refresh to sign in.");
@@ -1801,6 +1837,7 @@ function pullAleksNow(note, done){
   if(!DESKTOP) return;
   if(note) note("Opening ALEKS\u2026");
   window.owl.pullAleks(courses.map(function(c){ return c.id; })).then(function(res){
+    noteSource("aleks", res);
     if(!res || !res.ok){
       if(note) note(res && res.needLogin ? "Sign in to D2L first, then try again."
                                          : "Couldn\u2019t read ALEKS: "+((res&&res.error)||"unknown problem"));
@@ -1870,12 +1907,28 @@ function calKey(n){
     .replace(/[^a-z0-9]+/g," ").trim();
 }
 
+/* What each source said the last time it was read, so Sync can say
+   "Not connected" or "Signed out" instead of assuming everything works.
+   state: ok · signin (needs a sign-in, or never signed in) · none (signed in,
+   but there's nothing there) · error */
+function noteSource(id, res){
+  if(!res) return;
+  var all = load(K.src,{}), was = all[id] || {};
+  var e = String(res.error || "");
+  var st = res.ok ? "ok" : res.needLogin ? "signin" : /^no .*(courses|assignments) found/i.test(e) ? "none" : "error";
+  all[id] = {state:st, at:Date.now(), okAt: res.ok ? Date.now() : was.okAt || null, err: st === "error" ? e.slice(0,160) : null};
+  save(K.src, all);
+  if(ui.view === "sync" && typeof renderSync === "function") renderSync();
+}
+function sourceState(id){ return load(K.src,{})[id] || {}; }
+
 function pullCalendar(note, done){
   if(!DESKTOP){ if(done) done(false); return; }
   var ous = (DATA.courses||[]).map(function(c){ return c.id; }).filter(Boolean);
   if(!ous.length){ if(done) done(false); return; }
 
   window.owl.pullCalendar(ous).then(function(res){
+    noteSource("cal", res);
     if(!res || !res.ok){
       if(note) note(res && res.needLogin ? "Sign in to D2L to read your calendar."
                                          : "Couldn’t read the calendar: "+((res&&res.error)||"unknown problem"));
@@ -1935,6 +1988,7 @@ function mergeCalendar(base, res){
 function pullGradescope(interactive, note, done){
   if(!DESKTOP) return;
   window.owl.pullGradescope(!!interactive).then(function(res){
+    noteSource("gs", res);
     if(!res || !res.ok){
       if(note) note(res && res.needLogin ? "Sign in to Gradescope to pull your work."
                                          : "Couldn\u2019t read Gradescope: "+((res&&res.error)||"unknown problem"));
@@ -1993,6 +2047,7 @@ function launchRefresh(){
   var calP = (!ui.calOff && ids(DATA).length) ? window.owl.pullCalendar(ids(DATA)).then(null, none) : null;
 
   window.owl.grab(false).then(null, none).then(function(d2l){
+    noteSource("d2l", d2l);
     var fresh = d2l && d2l.ok && d2l.data && d2l.data.courses && d2l.data.courses.length;
     if(d2l && d2l.needLogin && !isEmpty) showSignInBar();
     var base = fresh ? keepExtras(d2l.data, DATA) : JSON.parse(JSON.stringify(DATA));
@@ -2000,6 +2055,7 @@ function launchRefresh(){
 
     return Promise.all([gsP, calP]).then(function(r){
       var next = base, gs = r[0], cal = r[1];
+      noteSource("gs", gs); noteSource("cal", cal);
       if(gs && gs.ok){
         next = mergeGradescope(next, gs).next;
         var st = load(K.gs,{}); st.lastPull = Date.now(); save(K.gs, st);
@@ -2245,11 +2301,12 @@ function showSignInBar(note){
 if(DESKTOP){
   window.owl.onData(function(j){
     applyData(j, null);
+    noteSource("d2l", {ok:true});
     /* a later quiet refresh got in after all, so the sign-in warning is stale */
     var sb = document.getElementById("u-signin");
     if(sb) document.getElementById("updatebar").classList.add("hidden");
   });
-  window.owl.onNeedLogin(function(){ showSignInBar(); });
+  window.owl.onNeedLogin(function(){ noteSource("d2l", {ok:false, needLogin:true}); showSignInBar(); });
   /* Launch-time reads are marked only once they FINISH: a reload partway
      through (the user pressing Refresh, say) simply runs them again. */
   if(!ranThisSession("owlhours.launch")) launchRefresh();
