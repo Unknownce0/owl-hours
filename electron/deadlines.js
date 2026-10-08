@@ -15,7 +15,7 @@ const RE_WORK = new RegExp('\\b' + WORK + '\\b', 'i');
 const RE_PHRASE = new RegExp("((?:[A-Za-z0-9][\\w'’-]*\\s+){0,3}?)(" + WORK + ")(\\s*(?:#\\s*)?\\d+[a-z]?(?![\\/:\\d]))?\\b", 'ig');
 
 const CUE = /\b(due|deadline|submit(?:ted)?|turn(?:ed)? in|upload|complete|finish|take|will be (?:on|held|given)|is on|opens?|closes?|before|by|no later than)\b/i;
-const NOISE = /\b(grades? (?:are|have been|were) (?:posted|released)|scored|earned|out of|graded|feedback|office hours|tutoring|workshop|meets on|class meets|scratch paper|study guide|practice (?:quiz|test|exam))\b/i;
+const NOISE = /\b(grades? (?:are|have been|were) (?:posted|released)|scored|earned|out of|graded|feedback|office hours|tutoring|workshop|meets on|class meets|scratch paper|study guide|practice (?:quiz|test|exam)|regularly scheduled|lab period|lab section)\b/i;
 
 const LEAD = new Set(['a', 'an', 'the', 'your', 'our', 'my', 'this', 'that', 'these', 'those', 'all', 'each', 'every', 'any',
   'of', 'for', 'and', 'or', 'to', 'in', 'on', 'take', 'complete', 'finish', 'submit', 'do', 'start', 'is', 'are', 'will', 'be',
@@ -63,7 +63,28 @@ function phrases(s) {
 /* chrono's results, cleaned: ranges become their end, a time on its own attaches
    to the date before it, "midnight" means the end of that day, and a date with
    no time means the end of the day, which is how deadlines are usually meant. */
+/* "Tuesday 13th" names no month, and chrono keeps only the "Tuesday" — the
+   CSE 1321L midterm on the 13th came out as the Tuesday after the post. Put the
+   month in: the first 13th on or after the post that falls on a Tuesday. */
+const WD = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+function monthless(s, ref) {
+  return s.replace(/\b(sun|mon|tue|wed|thu|fri|sat)[a-z]*\.?,?\s+(?:the\s+)?(\d{1,2})(st|nd|rd|th)?\b(?!\s*(?:\/|:|am|pm|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))/gi,
+    (all, wd, day) => {
+      const want = WD[wd.toLowerCase().slice(0, 3)], n = +day;
+      if (n < 1 || n > 31) return all;
+      const start = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+      for (let k = 0; k < 13; k++) {
+        const c = new Date(start.getFullYear(), start.getMonth() + k, n);
+        if (c.getDate() !== n || c < start) continue;
+        if (c.getDay() === want) return all + ' ' + MONTHS[c.getMonth()];
+      }
+      return all;
+    });
+}
+
 function datesIn(s, ref, weekdaysOk = true) {
+  s = monthless(s, ref);
   const raw = chrono.parse(s, ref, { forwardDate: true });
   const out = [];
   for (const r of raw) {
@@ -103,10 +124,12 @@ function analyze(docs) {
   for (const doc of docs || []) {
     const ref = new Date(doc.posted || Date.now()), dated = !!doc.posted;
     const sents = sentences(doc.text);
-    sents.forEach((s, i) => {
-      if (!RE_WORK.test(s) || NOISE.test(s)) return;
+    sents.forEach((orig, i) => {
+      if (!RE_WORK.test(orig) || NOISE.test(orig)) return;
       const base = { ou: doc.ou, src: doc.src, where: doc.where, url: doc.url || null, posted: ref.toISOString(),
-                     snippet: s.length > 230 ? s.slice(0, 227) + '…' : s };
+                     snippet: orig.length > 230 ? orig.slice(0, 227) + '…' : orig };
+      // dates and names are read from the same text, so their positions line up
+      const s = monthless(orig, ref);
       let ds = datesIn(s, ref, dated);
       const ph = phrases(s);
       if (!ph.length) return;

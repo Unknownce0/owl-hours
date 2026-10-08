@@ -577,7 +577,7 @@ items = [];
       status: it.s||null, points: (it.p!=null?it.p:null),
       /* shown as the done status ("47/50"); never used to decide done */
       score: (it.e!=null && it.src!=="aleks" && it.e>0) ? it.e : null,
-      attempts: it.at, maxAttempts: it.am, section: it.sec||null,
+      attempts: it.at, maxAttempts: it.am, section: it.sec||null, wait: !!it.wait,
       stale: !!(due && (due.getTime()<TERM_START || due.getTime()>TERM_END)),
       todo:false
     });
@@ -797,6 +797,8 @@ function statusOf(it){
     if(it.aleksPct != null) return ["done", it.aleksPct+"%"];
     return ["done", "Done"];
   }
+  /* closed, not graded yet, and D2L won't show the posts: can't say either way */
+  if(it.wait) return ["late", "Closed · not graded yet"];
   if(isOverdue(it)) return ["late", "Overdue"];
   if(notOpen(it)) return ["", "Opens "+fmtOpen(it.opens)];
   if(it.aleksPct != null) return ["", it.aleksPct+"% done"];
@@ -1292,13 +1294,14 @@ var SCRAPER = "javascript:(function(){var M={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5
 ".then(function(rs){var m={};rs.forEach(function(x){m[x.n]={i:x.i,r:x.r,ok:x.ok,id:x.id,d:x.d,s:x.s}});return m})}).catch(function(){return {}})}" +
 /* D2L's discussion page stops listing a topic once it closes, so a MISSED
    discussion used to vanish instead of showing overdue. The API still has it.
-   Only graded ones come back — graded above 0 is done, 0 is missed; an
-   ungraded closed topic proves nothing either way and stays out. */
+   Graded above 0 is done, 0 is missed. An ungraded closed topic proves
+   nothing either way, but leaving it out made a just-closed discussion (COMM
+   Unit 5) disappear entirely, so it comes back marked as waiting on a grade. */
 "function CLOSEDT(items,posts,graded,ou){if(!posts||!graded)return items;var have={};" +
 "items.forEach(function(i){if(i.t==='d')have[i.n.replace(SUB,'').replace(REP,'')]=1});var now=Date.now();" +
 "Object.keys(posts).forEach(function(n){var p=posts[n];if(have[n]||!p||!p.d||!p.id)return;if(Date.parse(p.d)>=now)return;" +
-"var g=graded[String(p.id)];if(g==null)return;" +
-"items.push({t:'d',n:n,d:p.d,tid:String(p.id),u:'/d2l/le/'+ou+'/discussions/topics/'+p.id+'/View',s:g>0?'Completed':'Not Submitted'})});return items}" +
+"var g=graded[String(p.id)];var it={t:'d',n:n,d:p.d,tid:String(p.id),u:'/d2l/le/'+ou+'/discussions/topics/'+p.id+'/View'};" +
+"if(g==null){if(!/\\d/.test(n))return;it.s=null;it.wait=1}else it.s=g>0?'Completed':'Not Submitted';items.push(it)});return items}" +
 /* Exams an instructor mentions only in an announcement ("Test 1 will be on
    Oct 6 from 02:20 PM - 03:50 PM") exist nowhere else in D2L. Skipped when
    the course already has a quiz of that name, so nothing is doubled. */
@@ -2192,8 +2195,10 @@ function judge(r, all){
     var target = pickMatch(matchesFor(r, r.before, all), {});
     if(!target || !target.due || target.due.getTime() < TODAY) return null;
     var task = pickMatch(matchesFor(r, r.name, all), {});
-    if(task && (isDone(task) || (task.due && task.due <= target.due))) return null;
-    return {type:"before", item:task, target:target, d:target.due, timed:!target.allDay};
+    /* "before you take the test" means before it opens, not before it closes */
+    var by = (target.opens && target.opens < target.due) ? target.opens : target.due;
+    if(task && (isDone(task) || (task.due && task.due <= by))) return null;
+    return {type:"before", item:task, target:target, d:by, timed:!target.allDay};
   }
   var d = new Date(r.d);
   if(isNaN(d) || d.getTime() < TODAY || d.getTime() > TERM_END) return null;
