@@ -1423,7 +1423,7 @@ function renderSync(){
     h += source({id:"d2l", title:"D2L", color: isEmpty ? OFF : d2lOut ? WARN : ON,
       state: isEmpty ? "Not connected" : d2lOut ? "Signed out" : "Connected",
       lines:["Assignments, quizzes, discussions, grades and announcements for "+(courses.length ? "all "+courses.length+" classes" : "your classes")+".",
-             d2lOut ? "Your Kennesaw sign-in ran out, so Owl Hours can’t see new work."+(d2lAt ? " Last refreshed "+esc(ago(d2lAt))+"." : "")
+             d2lOut ? (signinStop() ? signinStop()[0]+" "+signinStop()[1] : "Your Kennesaw sign-in ran out, so Owl Hours can’t see new work.")+(d2lAt ? " Last refreshed "+esc(ago(d2lAt))+"." : "")
                     : d2lAt ? "Last refreshed "+esc(ago(d2lAt))+". Owl Hours checks again every 2 hours." : "Not read yet."],
       actions: isEmpty || d2lOut ? '<button class="btn primary" id="d-refresh">Sign in to D2L</button>'+(isEmpty ? '' : '<button class="btn text" id="d-off">Disconnect</button>')
                                  : '<button class="btn" id="d-refresh">Refresh now</button><button class="btn text" id="d-off">Disconnect</button>'});
@@ -1935,11 +1935,24 @@ function noteSource(id, res){
   var all = load(K.src,{}), was = all[id] || {};
   var e = String(res.error || "");
   var st = res.ok ? "ok" : res.needLogin ? "signin" : /^no .*(courses|assignments) found/i.test(e) ? "none" : "error";
-  all[id] = {state:st, at:Date.now(), okAt: res.ok ? Date.now() : was.okAt || null, err: st === "error" ? e.slice(0,160) : null};
+  all[id] = {state:st, at:Date.now(), okAt: res.ok ? Date.now() : was.okAt || null, err: st === "error" ? e.slice(0,160) : null,
+             stop: st === "signin" ? (res.stop || was.stop || null) : null};
   save(K.src, all);
   if(ui.view === "sync" && typeof renderSync === "function") renderSync();
 }
 function sourceState(id){ return load(K.src,{})[id] || {}; }
+
+/* Where the quiet D2L sign-in stalled (d2l.js classifyStop), in plain words.
+   [why it stopped, what to do]. Unknown reasons keep the generic message. */
+var SIGNIN_STOP = {
+  approve: ["Microsoft wants you to approve this sign-in.", "Sign in and approve it in Authenticator \u2014 it takes a few seconds."],
+  stay:    ["Microsoft is asking whether to stay signed in.", "Sign in and choose Yes so it can stay quiet longer."],
+  pick:    ["Microsoft wants you to pick your Kennesaw account.", "Sign in and choose your KSU account."],
+  password:["Microsoft wants your password again.", "Sign in with your KSU password."],
+  "password-expired":["Kennesaw says your password needs changing.", "Sign in to change it, then Owl Hours picks up again."],
+  setup:   ["Microsoft wants more security info before letting you in.", "Sign in and finish the steps it shows."]
+};
+function signinStop(){ return SIGNIN_STOP[sourceState("d2l").stop] || null; }
 
 function pullCalendar(note, done){
   if(!DESKTOP){ if(done) done(false); return; }
@@ -2298,8 +2311,9 @@ function scanStatus(){
 /* When Kennesaw's sign-in lapses the app can't see new work. Say so plainly
    rather than sitting there looking up to date, and put the fix one click away. */
 function showSignInBar(note){
-  showUpdateBar('<span class="utext"><b>Your D2L sign-in has expired.</b> '+
-    (note || 'Owl Hours can&rsquo;t see new work until you sign in again.')+'</span>'+
+  var why = signinStop();
+  showUpdateBar('<span class="utext"><b>'+(why ? esc(why[0]) : 'Your D2L sign-in has expired.')+'</b> '+
+    (note || (why ? esc(why[1]) : 'Owl Hours can&rsquo;t see new work until you sign in again.'))+'</span>'+
     '<button class="ubtn" id="u-signin">Sign in to D2L</button>', function(bar){
       bar.querySelector("#u-signin").onclick = function(){
         var b = this;
@@ -2327,7 +2341,7 @@ if(DESKTOP){
     var sb = document.getElementById("u-signin");
     if(sb) document.getElementById("updatebar").classList.add("hidden");
   });
-  window.owl.onNeedLogin(function(){ noteSource("d2l", {ok:false, needLogin:true}); showSignInBar(); });
+  window.owl.onNeedLogin(function(stop){ noteSource("d2l", {ok:false, needLogin:true, stop:stop}); showSignInBar(); });
   /* Launch-time reads are marked only once they FINISH: a reload partway
      through (the user pressing Refresh, say) simply runs them again. */
   if(!ranThisSession("owlhours.launch")) launchRefresh();

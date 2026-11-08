@@ -242,10 +242,10 @@ async function refreshQuietly() {
   const res = await d2l.grab(false);
   // A lapsed Kennesaw sign-in used to fail silently, so the app just looked
   // stale. Tell the window, and let the user decide when to sign in.
-  if (!res.ok && res.needLogin) send('owl:needlogin', true);
+  if (!res.ok && res.needLogin) send('owl:needlogin', res.stop || null);
   if (process.env.OWL_DEBUG) {
     console.log('[owl] quiet refresh ->', JSON.stringify({
-      ok: res.ok, needLogin: !!res.needLogin, error: res.error || null,
+      ok: res.ok, needLogin: !!res.needLogin, stop: res.stop || null, error: res.error || null,
       courses: res.ok ? res.data.courses.length : 0
     }));
   }

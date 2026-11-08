@@ -83,6 +83,42 @@ function settle(win, quietMs = 2500, maxMs = 25000) {
 /* Signed in means a real D2L page, not the login stub or the SSO pages. */
 const onD2LProper = (url) => isD2L(url) && /\/d2l\//.test(url) && !/\/d2l\/(login|lp\/auth\/)/i.test(url);
 
+/* When a quiet sign-in stalls, say which page it stalled on, so the app can
+   tell "approve it in Authenticator" apart from "type your password".
+   Microsoft's pages carry a page id in window.$Config.pgid; the visible text
+   is the fallback. Only the page id and a short slice of text leave the page,
+   and only the resulting one-word reason is kept. */
+const STOP_PROBE = `(() => {
+  const c = window.$Config || {};
+  const t = document.body ? document.body.innerText : '';
+  return JSON.stringify({ pgid: String(c.pgid || ''), text: t.slice(0, 1500) });
+})()`;
+
+function classifyStop(url, pgid, text) {
+  let host = '';
+  try { host = new URL(url).hostname; } catch (e) { return 'unknown'; }
+  pgid = pgid || ''; text = text || '';
+  if (isD2L(url)) return 'd2l';
+  if (!/(^|\.)(microsoftonline\.com|microsoft\.com|live\.com)$/.test(host)) return 'other';
+  if (/ChangePassword|PasswordExpired/i.test(pgid) || /password (has )?expired|update your password/i.test(text)) return 'password-expired';
+  if (/ProofUp/i.test(pgid) || /more information required/i.test(text)) return 'setup';
+  if (/TFA|SAOTC|SAS|Mfa/i.test(pgid) || /approve (the |this )?sign.?in|enter (the )?code|verify your identity|authenticator/i.test(text)) return 'approve';
+  if (/Kmsi/i.test(pgid) || /stay signed in\?/i.test(text)) return 'stay';
+  if (/pick an account/i.test(text)) return 'pick';
+  if (/enter password|enter your password/i.test(text)) return 'password';
+  if (/Error/i.test(pgid)) return 'error';
+  return 'microsoft';
+}
+
+async function whyStopped(win, url) {
+  let pgid = '', text = '';
+  try {
+    const raw = await win.webContents.executeJavaScript(STOP_PROBE, true);
+    const o = JSON.parse(raw); pgid = o.pgid; text = o.text;
+  } catch (e) { /* page gone or blocked; the URL alone still says something */ }
+  return classifyStop(url, pgid, text);
+}
+
 /**
  * @param {boolean} interactive  may we show a sign-in window?
  * @param {(s:string)=>void} say progress reporter
@@ -109,8 +145,9 @@ async function grab(interactive, say = () => {}) {
     await loadAndWait(win, HOME);
     const landed = await settle(win);
 
-    let res;
+    let res, stop = null;
     if (!onD2LProper(landed)) {
+      stop = await whyStopped(win, landed);
       res = { ok: false, needLogin: true };   // bounced to single sign-on
     } else {
       res = await runScraper(win.webContents);
@@ -118,7 +155,7 @@ async function grab(interactive, say = () => {}) {
     if (res.ok) { close(); return res; }
 
     if (!res.needLogin) { close(); return res; }
-    if (!interactive) { close(); return { ok: false, needLogin: true }; }
+    if (!interactive) { close(); return { ok: false, needLogin: true, stop }; }
 
     // Session is gone or was never there — let them sign in, then retry.
     say('Sign in to D2L in the window that just opened.');
@@ -193,4 +230,4 @@ async function forget(origin) {
   return { ok: true };
 }
 
-module.exports = { grab, scan, signOut, forget };
+module.exports = { grab, scan, signOut, forget, classifyStop };
