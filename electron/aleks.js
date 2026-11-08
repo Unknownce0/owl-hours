@@ -40,7 +40,12 @@ async function findLaunchLinks(win, courseIds) {
               walk(m.Modules);
             });
           })(j.Modules);
-          return out.length ? out[0] : null;
+          if(!out.length) return null;
+          /* the course name, so the right ALEKS class can be picked when there are several */
+          return fetch('/d2l/api/lp/1.43/courses/'+ou,{credentials:'same-origin'})
+            .then(function(r){ return r.ok ? r.json() : null; })
+            .then(function(c){ out[0].name = c ? (c.Name||'') + ' ' + (c.Code||'') : ''; return out[0]; },
+                  function(){ return out[0]; });
         }).catch(function(){ return null; });
     })).then(function(r){ return JSON.stringify(r.filter(Boolean)); });
   })()`;
@@ -49,16 +54,47 @@ async function findLaunchLinks(win, courseIds) {
 }
 
 /** Poll a predicate in the page until it is true, or give up. */
-function waitFor(wc, expr, timeoutMs, everyMs = 700) {
+/* ALEKS allows one session per account. If it is opened anywhere else (a
+   browser tab, a second pull) this window lands on "Session Closed", and no
+   amount of waiting fixes that, so stop at once and say why. */
+const CLOSED = "/Session Closed/i.test(document.title)";
+const CLOSED_MSG = 'ALEKS was opened somewhere else, which closed this session. Close ALEKS elsewhere and try again.';
+
+function waitFor(wc, expr, timeoutMs, everyMs = 500) {
   const deadline = Date.now() + timeoutMs;
+  const probe = `(function(){ if (${CLOSED}) return 'closed'; return (${expr}) ? 'yes' : ''; })()`;
   return new Promise((resolve) => {
     (function tick() {
       if (Date.now() > deadline) return resolve(false);
-      wc.executeJavaScript(expr, true)
-        .then((ok) => (ok ? resolve(true) : setTimeout(tick, everyMs)))
+      wc.executeJavaScript(probe, true)
+        .then((r) => (r === 'yes' ? resolve(true) : r === 'closed' ? resolve(false) : setTimeout(tick, everyMs)))
         .catch(() => setTimeout(tick, everyMs));
     })();
   });
+}
+
+/** After a failed wait: was it the one-session rule? */
+function sessionClosed(wc) {
+  return wc.executeJavaScript(CLOSED, true).catch(() => false);
+}
+
+/* Each class on "My Classes" is a real <button aria-label="enter <class name>">
+   (ALEKS redesign, seen 2026-11-08). A DOM click on it opens the class in a
+   few seconds; the older approach of guessing the tile by its text and sending
+   a mouse click at the card's centre missed it and timed out. When there are
+   several classes, take the one sharing a course number with the D2L course. */
+function enterClassButton(courseName) {
+  return `(function(){
+    var bs = [].slice.call(document.querySelectorAll('button[aria-label^="enter "]')).filter(function(b){ return b.offsetParent; });
+    if (!bs.length) return null;
+    var want = (${JSON.stringify(courseName || '')}.match(/[A-Z]{2,5}\\s?-?\\d{4}/g) || []).map(function(x){ return x.replace(/[^A-Z0-9]/g,''); });
+    var pick = bs.filter(function(b){
+      var lab = (b.getAttribute('aria-label')||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+      return want.some(function(w){ return lab.indexOf(w) >= 0; });
+    })[0] || bs[0];
+    pick.click();
+    return pick.getAttribute('aria-label').replace(/^enter\\s+/i,'').slice(0,60);
+  })()`;
 }
 
 const ON_ALEKS = "/aleks\\.com$/.test(location.hostname)";
@@ -139,8 +175,14 @@ async function pull(courseIds, say = () => {}) {
 
   try {
     say('Looking for ALEKS in your courses…');
-    await new Promise((r) => { wc.once('did-finish-load', r); wc.once('did-fail-load', r); win.loadURL(D2L + '/d2l/home'); });
-    if (!/view\.usg\.edu/.test(wc.getURL())) { close(); return { ok: false, needLogin: true }; }
+    /* whoami is a tiny JSON reply on D2L's own origin, so the TOC fetches below
+       run same-origin without loading the whole dashboard first. A lapsed
+       session either redirects off D2L or answers without an Identifier. */
+    await new Promise((r) => { wc.once('did-finish-load', r); wc.once('did-fail-load', r); win.loadURL(D2L + '/d2l/api/lp/1.43/users/whoami'); });
+    const me = /view\.usg\.edu/.test(wc.getURL())
+      ? await wc.executeJavaScript("(function(){try{return !!JSON.parse(document.body.innerText).Identifier}catch(e){return false}})()", true).catch(() => false)
+      : false;
+    if (!me) { close(); return { ok: false, needLogin: true }; }
 
     const links = await findLaunchLinks(win, courseIds);
     if (!links.length) { close(); return { ok: false, error: 'no ALEKS link found in any of your D2L courses' }; }
@@ -150,11 +192,20 @@ async function pull(courseIds, say = () => {}) {
       say('Opening ALEKS… this signs you out of ALEKS elsewhere.');
       await new Promise((r) => { wc.once('did-finish-load', r); wc.once('did-fail-load', r); win.loadURL(D2L + link.url); });
 
-      if (!(await waitFor(wc, ON_ALEKS, 30000))) { results.push({ ou: link.ou, error: 'ALEKS did not open' }); continue; }
+      if (!(await waitFor(wc, ON_ALEKS, 30000))) {
+        results.push({ ou: link.ou, error: (await sessionClosed(wc)) ? CLOSED_MSG : 'ALEKS did not open' }); continue;
+      }
 
       // the launch lands either on the class list or straight in the class
+      let entered = false;
       if (await waitFor(wc, ON_CLASSES, 6000)) {
-        if (!(await waitFor(wc, CLASS_TILES_READY, 30000))) {
+        await waitFor(wc, "document.querySelector('button[aria-label^=\"enter \"]')", 15000);
+        const name = await wc.executeJavaScript(enterClassButton(link.name), true).catch(() => null);
+        if (name) { say('Entering ' + name + '…'); entered = await waitFor(wc, ON_CLASS_HOME, 20000); }
+        if (!entered && (await sessionClosed(wc))) { results.push({ ou: link.ou, error: CLOSED_MSG }); continue; }
+      }
+      if (!entered && (await waitFor(wc, ON_CLASSES, 1000))) {
+        if (!(await waitFor(wc, CLASS_TILES_READY, 15000))) {
           results.push({ ou: link.ou, error: 'the ALEKS class list never rendered' });
           continue;
         }
@@ -192,7 +243,8 @@ async function pull(courseIds, say = () => {}) {
 
       /* Entering the class is a full navigation, which tears down anything
          injected beforehand — so wait for the new page before touching it. */
-      if (!(await waitFor(wc, ON_CLASS_HOME, 40000))) {
+      if (!entered && !(await waitFor(wc, ON_CLASS_HOME, 20000))) {
+        if (await sessionClosed(wc)) { results.push({ ou: link.ou, error: CLOSED_MSG }); continue; }
         // report what we were actually looking at, rather than a bare failure
         const seen = await wc.executeJavaScript(
           "JSON.stringify({title:document.title,host:location.hostname,buttons:[].slice.call(document.querySelectorAll('button')).map(function(b){return (b.getAttribute('aria-label')||b.innerText||'').replace(/\\s+/g,' ').trim().slice(0,26)}).filter(Boolean).slice(0,10)})",
@@ -222,7 +274,7 @@ async function pull(courseIds, say = () => {}) {
         wc.sendInputEvent({ type: 'mouseUp', x: mb.x, y: mb.y, button: 'left', clickCount: 1 });
       }
 
-      if (!(await waitFor(wc, MENU_OPEN, 15000))) {
+      if (!(await waitFor(wc, MENU_OPEN, 6000))) {
         /* Fall back to a DOM click before giving up, and report what the page
            actually looked like — "the menu did not open" on its own gave
            nothing to work from. */
@@ -247,8 +299,8 @@ async function pull(courseIds, say = () => {}) {
       }
       await wc.executeJavaScript(CLICK_ASSIGNMENTS, true).catch(() => {});
 
-      if (!(await waitFor(wc, ON_ASSIGNMENTS, 40000))) {
-        results.push({ ou: link.ou, error: 'could not reach the assignments list' });
+      if (!(await waitFor(wc, ON_ASSIGNMENTS, 20000))) {
+        results.push({ ou: link.ou, error: (await sessionClosed(wc)) ? CLOSED_MSG : 'could not reach the assignments list' });
         continue;
       }
 
