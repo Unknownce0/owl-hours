@@ -8,7 +8,11 @@ const SHELL = [
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/apple-touch-icon.png'
+  './icons/apple-touch-icon.png',
+  './fonts/nunito-latin.woff2',
+  './fonts/nunito-latin-ext.woff2',
+  './fonts/hanken-grotesk-latin.woff2',
+  './fonts/hanken-grotesk-latin-ext.woff2'
 ];
 
 self.addEventListener('install', e => {
@@ -35,7 +39,7 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
-  // Anything off-origin (a sync URL, a font) goes straight to the network.
+  // Anything off-origin (a sync URL) goes straight to the network.
   if (url.origin !== self.location.origin) return;
 
   // Network-first for the app itself so a redeploy is picked up promptly,

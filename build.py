@@ -19,6 +19,7 @@ HEAD = """<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
+__CSP__
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Your Kennesaw State coursework in one place.">
 <meta name="theme-color" content="#0B0E14">
@@ -61,6 +62,33 @@ def app_version():
     """Single source of truth for the version: electron/package.json."""
     pkg = os.path.join(HERE, "electron", "package.json")
     return json.load(open(pkg))["version"]
+
+
+def with_csp(html):
+    """Lock the page down: no remote scripts, no plugins, no <base> tricks.
+
+    Scripts are allowed by hash, not 'unsafe-inline', so only the exact inline
+    scripts this build wrote can run. The page has no inline event handlers
+    (every handler is attached from the script) and the grabber's javascript:
+    link is never followed here, only dragged to the bookmarks bar. Styles
+    stay inline (style attributes are everywhere). connect-src stays open
+    because Sync fetches whatever address the user gives it.
+    """
+    import base64, hashlib, re
+    scripts = re.findall(r"<script>(.*?)</script>", html, re.S)
+    hashes = " ".join("'sha256-%s'" % base64.b64encode(hashlib.sha256(s.encode("utf-8")).digest()).decode()
+                      for s in scripts)
+    csp = ("default-src 'self'; script-src 'self' %s; style-src 'self' 'unsafe-inline'; "
+           "font-src 'self'; img-src 'self' data:; connect-src *; worker-src 'self'; "
+           "manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" % hashes)
+    return html.replace("__CSP__", '<meta http-equiv="Content-Security-Policy" content="%s">' % csp, 1)
+
+
+def copy_dir(name, dst_root):
+    dst = os.path.join(dst_root, name)
+    if os.path.isdir(dst):
+        shutil.rmtree(dst)
+    shutil.copytree(os.path.join(HERE, name), dst)
 
 
 def render(data_json):
@@ -134,8 +162,8 @@ def main():
 
     # 1. hosted PWA — deliberately empty, because the repo is public
     body = render("null")
-    html = (HEAD.replace("__MANIFEST__", '<link rel="manifest" href="manifest.json">')
-            + body + TAIL.replace("__SW__", SW_REG))
+    html = with_csp(HEAD.replace("__MANIFEST__", '<link rel="manifest" href="manifest.json">')
+                    + body + TAIL.replace("__SW__", SW_REG))
     open(os.path.join(HERE, "index.html"), "w").write(html)
     built.append(("index.html (PWA, no data)", len(html)))
 
@@ -156,12 +184,11 @@ def main():
     # 2. Electron loads the same document, minus the service worker
     appdir = os.path.join(HERE, "electron", "app")
     os.makedirs(appdir, exist_ok=True)
-    desktop = HEAD.replace("__MANIFEST__", "") + body + TAIL.replace("__SW__", "")
+    desktop = with_csp(HEAD.replace("__MANIFEST__", "") + body + TAIL.replace("__SW__", ""))
     open(os.path.join(appdir, "index.html"), "w").write(desktop)
-    icons_dst = os.path.join(appdir, "icons")
-    if os.path.isdir(icons_dst):
-        shutil.rmtree(icons_dst)
-    shutil.copytree(os.path.join(HERE, "icons"), icons_dst)
+    # app/**/* is in electron-builder's allowlist, so these ship with the page
+    copy_dir("icons", appdir)
+    copy_dir("fonts", appdir)
     built.append(("electron/app/index.html", len(desktop)))
 
     # 2b. A personal desktop copy with the data already inside, so it works on
@@ -169,10 +196,11 @@ def main():
     priv_for_desktop = load_private_data()
     if priv_for_desktop:
         raw_pd, parsed_pd = priv_for_desktop
-        personal = (HEAD.replace("__MANIFEST__", "")
-                    + render(raw_pd).replace('/*__PERSONAL__*/false', 'true')
-                    + TAIL.replace("__SW__", ""))
+        personal = with_csp(HEAD.replace("__MANIFEST__", "")
+                            + render(raw_pd).replace('/*__PERSONAL__*/false', 'true')
+                            + TAIL.replace("__SW__", ""))
         os.makedirs(os.path.join(HERE, "private", "desktop"), exist_ok=True)
+        copy_dir("fonts", os.path.join(HERE, "private", "desktop"))
         open(os.path.join(HERE, "private", "desktop", "index.html"), "w").write(personal)
         n = sum(len(c.get("items", [])) for c in parsed_pd["courses"])
         built.append(("private/desktop/index.html (personal, %d items)" % n, len(personal)))
