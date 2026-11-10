@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-l48GwXHaBpFXEiOQ3zeA9/AaJy5vZwBWE4lXMpjK59Q=' 'sha256-O7m2BdscHLJ2i99SqWbu/5SJGQ30O9M63WocKc5bE+4='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src *; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Your Kennesaw State coursework in one place.">
 <meta name="theme-color" content="#0B0E14">
@@ -21,11 +22,14 @@
 </head>
 <body>
 <title>Owl Hours</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&family=Hanken+Grotesk:wght@400;500;600&display=swap">
-
 <style>
+/* Bundled fonts (SIL Open Font License, see fonts/), so nothing loads from
+   Google and the app looks the same offline. Both are variable fonts: one
+   file per script covers every weight used. */
+@font-face{font-family:"Nunito";font-style:normal;font-weight:700 800;font-display:swap;src:url(fonts/nunito-latin-ext.woff2) format("woff2");unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:"Nunito";font-style:normal;font-weight:700 800;font-display:swap;src:url(fonts/nunito-latin.woff2) format("woff2");unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:"Hanken Grotesk";font-style:normal;font-weight:400 600;font-display:swap;src:url(fonts/hanken-grotesk-latin-ext.woff2) format("woff2");unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:"Hanken Grotesk";font-style:normal;font-weight:400 600;font-display:swap;src:url(fonts/hanken-grotesk-latin.woff2) format("woff2");unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
 /* Night Shift. Night is the primary theme; Day is the same token names with
    daylight values. The rules behind these values live in the design system:
    one lamp per screen, time is the layout, round where you touch. */
@@ -544,7 +548,8 @@ if(ui.defaults !== 2){
 }
 if(!ui.theme) ui.theme = "system";
 document.documentElement.setAttribute("data-theme", ui.theme);
-if(/Mac/i.test(navigator.platform||"") && window.owl && window.owl.isDesktop) document.documentElement.classList.add("is-mac");
+var IS_MAC = /Mac/i.test(navigator.platform||"");
+if(IS_MAC && window.owl && window.owl.isDesktop) document.documentElement.classList.add("is-mac");
 
 var TYPE = {a:"assignment", q:"quiz", d:"discussion"};
 var esc = function(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){
@@ -1655,7 +1660,8 @@ function renderSettings(){
        setRow("The night before", "At 8 PM, for anything due the next day.", toggleHTML("remind.eve", r.eve, "Remind me the night before"))+
        setRow("Two hours before", "For anything you haven’t finished yet.", toggleHTML("remind.two", r.two, "Remind me two hours before"))+
        setRow("Exams", "A day ahead, with the time and whether it’s online or in person.", toggleHTML("remind.exam", r.exam, "Remind me before exams"))+
-       '<p class="msg">Reminders come from Owl Hours while it’s open'+(DESKTOP ? ", even in the background" : "")+'.</p></section>';
+       (DESKTOP ? setRow("Keep running in the background", "Owl Hours starts when you log in and stays running after you close its window, so reminders still arrive."+(IS_MAC ? " Quit it from the Dock to stop it." : " Use its icon by the clock to open or quit it."), toggleHTML("background", ui.background, "Keep running in the background")) : '')+
+       '<p class="msg">Reminders come from Owl Hours while it’s open'+(DESKTOP ? (ui.background ? ", even with its window closed" : ", even in the background") : "")+'.</p></section>';
   h += '</div><div>';
   h += '<section><h2 class="label">Classes</h2><p class="msg">Turn a class off to hide it from the Agenda and Calendar. Its grades stay.</p>'+
        courses.map(function(c){
@@ -1694,6 +1700,7 @@ function renderSettings(){
         if(on && typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission();
       }
       else ui[id] = on;
+      if(id === "background" && DESKTOP && window.owl.setBackground) window.owl.setBackground(on).then(null, function(){});
       save(K.ui, ui); renderSettings();
     };
   });
@@ -1844,7 +1851,13 @@ function desktopGrab(interactive, note){
   if(note) note(interactive ? "Opening D2L\u2026" : "Checking D2L\u2026");
   window.owl.grab(interactive).then(function(res){
     noteSource("d2l", res);
-    if(res && res.ok){ applyData(res.data, note); return; }
+    if(res && res.ok){
+      applyData(res.data, note);
+      /* Signing in from the bar or Sync: the calendar read at launch failed
+         for the same reason, so read it again now that D2L is in. */
+      if(interactive && !ui.calOff) pullCalendar(null, null);
+      return;
+    }
     if(res && res.needLogin){
       if(note) note(interactive ? "Sign-in didn\u2019t finish. Try again." : "You\u2019re signed out of D2L \u2014 press Refresh to sign in.");
       return;
@@ -2014,6 +2027,9 @@ function mergeCalendar(base, res){
          this run found anything. Doing it after the early return below meant a
          course whose events were all filtered out (COMM 1100's bulk-stamped
          textbook chapters) kept its stale rows forever. */
+      /* A course D2L didn't answer for keeps what it had: an unread calendar
+         is not an empty one. (res.read lists the courses that were read.) */
+      if(res.read && res.read.map(String).indexOf(String(c.id)) < 0) return;
       var before = (c.items||[]).length;
       c.items = (c.items||[]).filter(function(i){ return i.src !== "cal"; });
       removed += before - c.items.length;
@@ -2090,8 +2106,12 @@ function mergeGradescope(base, res){
    reloaded the page, which restarted a 6-second Gradescope timer, whose
    reload restarted a 9-second calendar timer — about 20 seconds and three
    reloads before the page was whole. They are independent reads, so they now
-   run side by side and are folded into one dataset before anything reloads. */
-function launchRefresh(){
+   run side by side and are folded into one dataset before anything reloads.
+   The same read runs on the two-hour timer, on wake, and from the Refresh
+   button (which may open the D2L sign-in window). Never ALEKS. */
+var refreshing = null;
+function refreshAll(interactive){
+  if(refreshing) return refreshing;
   var ids = function(d){ return ((d && d.courses)||[]).map(function(c){ return c.id; }).filter(Boolean); };
   var none = function(){ return null; };
   /* a source the user disconnected in Sync stays unread */
@@ -2100,14 +2120,24 @@ function launchRefresh(){
      yet, so it has to wait for D2L to say what they are. */
   var calP = (!ui.calOff && ids(DATA).length) ? window.owl.pullCalendar(ids(DATA)).then(null, none) : null;
 
-  window.owl.grab(false).then(null, none).then(function(d2l){
+  refreshing = window.owl.grab(!!interactive).then(null, none).then(function(d2l){
     noteSource("d2l", d2l);
     var fresh = d2l && d2l.ok && d2l.data && d2l.data.courses && d2l.data.courses.length;
-    if(d2l && d2l.needLogin && !isEmpty) showSignInBar();
+    if(d2l && d2l.needLogin && !isEmpty && !interactive) showSignInBar();
+    /* signed in after all, so a sign-in warning on screen is stale */
+    if(fresh){ var sb = document.getElementById("u-signin"); if(sb) document.getElementById("updatebar").classList.add("hidden"); }
     var base = fresh ? keepExtras(d2l.data, DATA) : JSON.parse(JSON.stringify(DATA));
     if(!calP && !ui.calOff && ids(base).length) calP = window.owl.pullCalendar(ids(base)).then(null, none);
 
     return Promise.all([gsP, calP]).then(function(r){
+      var gs = r[0], cal = r[1];
+      /* The calendar started alongside a sign-in can lose the race to it.
+         Once D2L is in, read it again rather than leave the exams stale. */
+      if(fresh && !ui.calOff && cal && !cal.ok && ids(base).length){
+        return window.owl.pullCalendar(ids(base)).then(null, none).then(function(c2){ return [gs, c2]; });
+      }
+      return r;
+    }).then(function(r){
       var next = base, gs = r[0], cal = r[1];
       noteSource("gs", gs); noteSource("cal", cal);
       if(gs && gs.ok){
@@ -2121,10 +2151,14 @@ function launchRefresh(){
         showSignInBar("Your exams live only in the D2L calendar, and Owl Hours can\u2019t read it until you sign in.");
       }
       markSession("owlhours.launch");
-      if(!sameData(next, DATA)) applyNow(next);
+      var changed = !sameData(next, DATA);
+      if(changed) applyNow(next);
+      return {d2l: d2l, gs: gs, cal: cal, changed: changed};
     });
-  });
+  }).then(function(r){ refreshing = null; return r; }, function(e){ refreshing = null; throw e; });
+  return refreshing;
 }
+function launchRefresh(){ return refreshAll(false); }
 
 /* Which D2L page opens ALEKS for each class. Reading it only touches D2L,
    so unlike a pull it never signs anyone out of ALEKS. */
@@ -2367,6 +2401,9 @@ if(DESKTOP){
   /* Launch-time reads are marked only once they FINISH: a reload partway
      through (the user pressing Refresh, say) simply runs them again. */
   if(!ranThisSession("owlhours.launch")) launchRefresh();
+  /* the two-hour timer and waking from sleep (main.js says when) */
+  if(window.owl.onRefresh) window.owl.onRefresh(function(){ refreshAll(false).then(null, function(){}); });
+  if(window.owl.setBackground) window.owl.setBackground(!!ui.background).then(null, function(){});
   /* after the launch refresh has had time to land */
   setTimeout(function(){ runScan(false); }, 25000);
 }
@@ -2658,13 +2695,17 @@ if(DESKTOP){
     var b = this;
     b.disabled = true; b.classList.add("spin"); b.setAttribute("aria-label","Refreshing");
     var restore = function(){ b.disabled = false; b.classList.remove("spin"); b.setAttribute("aria-label","Refresh from D2L"); };
-    desktopGrab(true, function(s){
-      if(/signed out|sign-in|sign in/i.test(s)){ restore(); showSignInBar(); return; }
-      if(/^(Opening|Checking)/.test(s)) return;
+    /* D2L (signing in if it has to), Gradescope and the calendar together */
+    refreshAll(true).then(function(r){
       restore();
+      var d = r && r.d2l;
+      if(!d || !d.ok){
+        if(d && (d.needLogin || /sign-in/i.test(d.error||""))) showSignInBar();
+        return;
+      }
       /* D2L is done. ALEKS is a separate system with its own cost, so ask. */
       offerAleks();
-    });
+    }, restore);
     setTimeout(restore, 8000);
   };
 }

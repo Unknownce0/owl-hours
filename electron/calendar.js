@@ -18,55 +18,52 @@
  *     with no match by name are kept, so the calendar adds what was missing
  *     rather than doubling everything.
  */
-const { BrowserWindow } = require('electron');
+const remote = require('./remote');
 
-const PARTITION = 'persist:d2l';
-const HOME = 'https://kennesaw.view.usg.edu/d2l/home';
-
-const isD2L = (url) => /^https:\/\/[^/]*\.view\.usg\.edu\//.test(url);
-
+/* Every course is read at once. Each reply says whether that course was read,
+   so a failure can't pass for "no events": the app clears a course's old
+   calendar rows only when that course was actually read again. */
 function readJS(orgUnits, fromISO, toISO) {
   return `(async function(){
     var OUS = ${JSON.stringify(orgUnits)};
-    var out = [];
-    for (var i = 0; i < OUS.length; i++) {
-      var ou = OUS[i];
+    var per = await Promise.all(OUS.map(async function(ou){
       try {
         var r = await fetch('/d2l/api/le/1.67/' + ou + '/calendar/events/myEvents/'
               + '?startDateTime=${fromISO}&endDateTime=${toISO}',
               { credentials: 'include', headers: { Accept: 'application/json' } });
-        if (!r.ok) continue;
+        if (!r.ok) return null;
         var j = await r.json();
         var arr = j.Objects || j.Items || j || [];
-        if (!Array.isArray(arr)) continue;
-        for (var k = 0; k < arr.length; k++) {
-          var x = arr[k];
-          out.push({
-            ou: ou,
-            id: x.CalendarEventId,
-            n: (x.Title || '').replace(/\\s+/g, ' ').trim(),
-            start: x.StartDateTime,
-            end: x.EndDateTime,
-            allDay: !!x.IsAllDayEvent,
-            where: x.LocationName || '',
-            entity: x.AssociatedEntity ? (x.AssociatedEntity.AssociatedEntityType || 'linked') : null
-          });
-        }
-      } catch (e) { /* one bad course must not lose the rest */ }
-    }
-    return JSON.stringify(out);
+        if (!Array.isArray(arr)) return null;
+        return arr.map(function(x){ return {
+          ou: ou,
+          id: x.CalendarEventId,
+          n: (x.Title || '').replace(/\\s+/g, ' ').trim(),
+          start: x.StartDateTime,
+          end: x.EndDateTime,
+          allDay: !!x.IsAllDayEvent,
+          where: x.LocationName || '',
+          entity: x.AssociatedEntity ? (x.AssociatedEntity.AssociatedEntityType || 'linked') : null
+        }; });
+      } catch (e) { return null; }   /* one bad course must not lose the rest */
+    }));
+    var events = [], read = [], failed = [];
+    per.forEach(function(list, i){
+      if (list) { read.push(OUS[i]); events = events.concat(list); } else failed.push(OUS[i]);
+    });
+    return JSON.stringify({ events: events, read: read, failed: failed });
   })()`;
 }
 
-function load(win, url) {
-  return new Promise((r) => {
-    let settled = false;
-    const done = () => { if (!settled) { settled = true; r(); } };
-    win.webContents.once('did-finish-load', done);
-    win.webContents.once('did-fail-load', done);
-    setTimeout(done, 30000);
-    win.loadURL(url);
-  });
+/** Turn what the page returned into a result. Pure, so it can be tested. */
+function interpret(raw) {
+  let j;
+  try { j = JSON.parse(raw); } catch (e) { return { ok: false, error: 'could not read the calendar' }; }
+  if (!j || !Array.isArray(j.events)) return { ok: false, error: 'could not read the calendar' };
+  /* Every course failing is not "no exams": returning ok with nothing let the
+     app wipe every exam it knew about. */
+  if (!j.read || !j.read.length) return { ok: false, error: 'D2L did not answer for any course calendar' };
+  return { ok: true, events: j.events, read: j.read, failed: j.failed || [] };
 }
 
 /**
@@ -76,16 +73,12 @@ function load(win, url) {
 async function pull(orgUnits, say = () => {}) {
   if (!orgUnits || !orgUnits.length) return { ok: false, error: 'no courses to read' };
 
-  const win = new BrowserWindow({
-    show: false, width: 1024, height: 780,
-    webPreferences: { partition: PARTITION, contextIsolation: true, nodeIntegration: false, sandbox: true }
-  });
+  const win = remote.open();
   const close = () => { if (!win.isDestroyed()) win.destroy(); };
 
   try {
     say('Reading your course calendars…');
-    await load(win, HOME);
-    if (!isD2L(win.webContents.getURL())) { close(); return { ok: false, needLogin: true }; }
+    if (!(await remote.d2lSignedIn(win))) { close(); return { ok: false, needLogin: true }; }
 
     // A wide window: exams get scheduled the whole term out, not just this month.
     const from = new Date(Date.now() - 14 * 864e5).toISOString();
@@ -93,21 +86,13 @@ async function pull(orgUnits, say = () => {}) {
 
     const raw = await win.webContents.executeJavaScript(readJS(orgUnits, from, to), true);
     close();
-
-    let events = [];
-    try { events = JSON.parse(raw); } catch (e) { return { ok: false, error: 'could not read the calendar' }; }
-    return { ok: true, events };
+    return interpret(raw);
   } catch (e) {
     close();
     return { ok: false, error: String((e && e.message) || e) };
   }
 }
 
-/** A timed sitting rather than a deadline: a real span, not a single instant. */
-function isScheduled(ev) {
-  if (!ev.start || !ev.end) return false;
-  const a = Date.parse(ev.start), b = Date.parse(ev.end);
-  return isFinite(a) && isFinite(b) && (b - a) >= 60000;
-}
+const { isScheduled } = require('./shape');
 
-module.exports = { pull, isScheduled };
+module.exports = { pull, isScheduled, interpret };

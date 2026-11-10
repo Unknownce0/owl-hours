@@ -14,6 +14,10 @@ contextBridge.exposeInMainWorld('owl', {
   scanCourses: (orgUnits) => ipcRenderer.invoke('owl:scan', orgUnits),
   pullGradescope: (interactive) => ipcRenderer.invoke('owl:gradescope', interactive),
   pullCalendar: (orgUnits) => ipcRenderer.invoke('owl:calendar', orgUnits),
+  /* the timed and on-wake refresh: main says when, the page does the reading */
+  onRefresh: (cb) => { ipcRenderer.on('owl:refresh', () => cb()); ipcRenderer.send('owl:refreshReady'); },
+  /* keep running with the window closed, and start at login */
+  setBackground: (on) => ipcRenderer.invoke('owl:setBackground', !!on),
   /* Updates: check, then download and install only when asked. */
   updateCheck: () => ipcRenderer.invoke('owl:updateCheck'),
   updateDownload: () => ipcRenderer.invoke('owl:updateDownload'),

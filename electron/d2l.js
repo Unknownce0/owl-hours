@@ -1,12 +1,13 @@
 /* Scraping D2L from inside the app.
    The session lives in its own persistent partition, so signing in once keeps
    working across restarts and later refreshes need no interaction at all. */
-const { BrowserWindow, session } = require('electron');
+const { session } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const remote = require('./remote');
 
 const HOME = 'https://kennesaw.view.usg.edu/d2l/home';
-const PARTITION = 'persist:d2l';
+const PARTITION = remote.PARTITION;
 const SCRAPER = fs.readFileSync(path.join(__dirname, 'grabber-return.js'), 'utf8');
 const SCANNER = fs.readFileSync(path.join(__dirname, 'scan-page.js'), 'utf8');
 const deadlines = require('./deadlines');
@@ -39,16 +40,7 @@ async function runScraper(wc) {
   }
 }
 
-function loadAndWait(win, url) {
-  return new Promise((resolve) => {
-    let settled = false;
-    const done = () => { if (!settled) { settled = true; resolve(); } };
-    win.webContents.once('did-finish-load', done);
-    win.webContents.once('did-fail-load', done);
-    setTimeout(done, 30000);
-    win.loadURL(url);
-  });
-}
+const loadAndWait = remote.load;
 
 /* A lapsed D2L session isn't necessarily a lapsed sign-in. D2L first serves a
    stub page that script-redirects to its login, which bounces through
@@ -124,19 +116,8 @@ async function whyStopped(win, url) {
  * @param {(s:string)=>void} say progress reporter
  */
 async function grab(interactive, say = () => {}) {
-  const win = new BrowserWindow({
-    show: false,
-    width: 1024,
-    height: 780,
-    title: 'Sign in to D2L',
-    webPreferences: {
-      partition: PARTITION,
-      contextIsolation: true,
-      nodeIntegration: false,
-      // deliberately no preload here: this window loads Kennesaw's real login page
-      sandbox: true
-    }
-  });
+  // deliberately no preload here: this window loads Kennesaw's real login page
+  const win = remote.open({ width: 1024, height: 780, title: 'Sign in to D2L' });
 
   const close = () => { if (!win.isDestroyed()) win.destroy(); };
 
@@ -196,13 +177,10 @@ async function grab(interactive, say = () => {}) {
 async function scan(orgUnits) {
   const ous = (orgUnits || []).map(String).filter((x) => /^\d+$/.test(x));
   if (!ous.length) return { ok: true, results: [], stats: {} };
-  const win = new BrowserWindow({
-    show: false,
-    webPreferences: { partition: PARTITION, contextIsolation: true, nodeIntegration: false, sandbox: true }
-  });
+  const win = remote.open();
   try {
-    await loadAndWait(win, HOME);
-    if (!onD2LProper(await settle(win))) return { ok: false, needLogin: true };
+    /* whoami is enough: the scanner only fetches D2L's APIs and pages */
+    if (!(await remote.d2lSignedIn(win))) return { ok: false, needLogin: true };
     const code = 'var OU_LIST = ' + JSON.stringify(ous) + ';\n' + SCANNER;
     const raw = await Promise.race([
       win.webContents.executeJavaScriptInIsolatedWorld(1, [{ code }]),

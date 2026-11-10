@@ -11,10 +11,9 @@
  *   - The launch link lives in D2L as an LTI quicklink, and its id differs per
  *     course, so it is discovered from D2L's content API rather than hardcoded.
  */
-const { BrowserWindow } = require('electron');
+const remote = require('./remote');
 
-const PARTITION = 'persist:d2l';
-const D2L = 'https://kennesaw.view.usg.edu';
+const D2L = remote.D2L;
 
 /** Find every ALEKS launch link across the user's courses. */
 async function findLaunchLinks(win, courseIds) {
@@ -166,10 +165,7 @@ const PARSE = `(function(){
  * @param {(s:string)=>void} say  progress reporter
  */
 async function pull(courseIds, say = () => {}) {
-  const win = new BrowserWindow({
-    show: false, width: 1100, height: 820, title: 'ALEKS',
-    webPreferences: { partition: PARTITION, contextIsolation: true, nodeIntegration: false, sandbox: true }
-  });
+  const win = remote.open({ width: 1100, height: 820, title: 'ALEKS' });
   const wc = win.webContents;
   const close = () => { if (!win.isDestroyed()) win.destroy(); };
 
@@ -178,11 +174,7 @@ async function pull(courseIds, say = () => {}) {
     /* whoami is a tiny JSON reply on D2L's own origin, so the TOC fetches below
        run same-origin without loading the whole dashboard first. A lapsed
        session either redirects off D2L or answers without an Identifier. */
-    await new Promise((r) => { wc.once('did-finish-load', r); wc.once('did-fail-load', r); win.loadURL(D2L + '/d2l/api/lp/1.43/users/whoami'); });
-    const me = /view\.usg\.edu/.test(wc.getURL())
-      ? await wc.executeJavaScript("(function(){try{return !!JSON.parse(document.body.innerText).Identifier}catch(e){return false}})()", true).catch(() => false)
-      : false;
-    if (!me) { close(); return { ok: false, needLogin: true }; }
+    if (!(await remote.d2lSignedIn(win))) { close(); return { ok: false, needLogin: true }; }
 
     const links = await findLaunchLinks(win, courseIds);
     if (!links.length) { close(); return { ok: false, error: 'no ALEKS link found in any of your D2L courses' }; }
@@ -190,7 +182,7 @@ async function pull(courseIds, say = () => {}) {
     const results = [];
     for (const link of links) {
       say('Opening ALEKS… this signs you out of ALEKS elsewhere.');
-      await new Promise((r) => { wc.once('did-finish-load', r); wc.once('did-fail-load', r); win.loadURL(D2L + link.url); });
+      await remote.load(win, D2L + link.url);
 
       if (!(await waitFor(wc, ON_ALEKS, 30000))) {
         results.push({ ou: link.ou, error: (await sessionClosed(wc)) ? CLOSED_MSG : 'ALEKS did not open' }); continue;
@@ -328,17 +320,10 @@ async function pull(courseIds, say = () => {}) {
  * opened, so this is safe to run whenever, unlike pull().
  */
 async function findCourses(courseIds) {
-  const win = new BrowserWindow({
-    show: false, width: 900, height: 700,
-    webPreferences: { partition: PARTITION, contextIsolation: true, nodeIntegration: false, sandbox: true }
-  });
+  const win = remote.open({ width: 900, height: 700 });
   try {
-    await new Promise((r) => {
-      win.webContents.once('did-finish-load', r);
-      win.webContents.once('did-fail-load', r);
-      win.loadURL(D2L + '/d2l/home');
-    });
-    if (!/view\.usg\.edu/.test(win.webContents.getURL())) { win.destroy(); return []; }
+    /* whoami, not the dashboard: the TOC fetches only need D2L's origin */
+    if (!(await remote.d2lSignedIn(win))) { win.destroy(); return []; }
     const links = await findLaunchLinks(win, courseIds);
     win.destroy();
     return links.map((l) => ({ ou: l.ou, view: l.view }));

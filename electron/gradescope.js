@@ -9,9 +9,8 @@
  * Its markup is unusually good to scrape: assignment rows carry semantic classes
  * and, best of all, real <time datetime="..."> values, so no date parsing guesswork.
  */
-const { BrowserWindow } = require('electron');
+const remote = require('./remote');         // one signed-in profile for everything
 
-const PARTITION = 'persist:d2l';          // one signed-in profile for everything
 const HOME = 'https://www.gradescope.com/account';
 
 const LOGGED_IN = "!/\\/login/.test(location.pathname) && !!document.querySelector('a[href^=\"/courses/\"]')";
@@ -35,8 +34,10 @@ const LIST_COURSES = `(function(){
   return JSON.stringify(out);
 })()`;
 
-/** The assignment table for one course. */
-const READ_COURSE = `(function(){
+/* The assignment table, read from a document: the loaded page, or a course
+   page fetched and parsed without being shown. Same code for both, so the two
+   routes can't drift apart. */
+const READ_DOC = `function(document){
   function clean(s){ return (s||'').replace(/\\s+/g,' ').trim(); }
   function iso(el){
     if(!el) return null;
@@ -65,8 +66,36 @@ const READ_COURSE = `(function(){
       u: link ? link.getAttribute('href') : null
     });
   });
-  return JSON.stringify({ title: document.title, items: out });
-})()`;
+  return { title: document.title, items: out };
+}`;
+
+/** The assignment table for one course (the page this window has open). */
+const READ_COURSE = `JSON.stringify((${READ_DOC})(document))`;
+
+/* Every course at once, from the account page: fetch each course page and
+   parse it, rather than loading them one after another in the window. */
+function readAll(courses) {
+  return `(function(){
+    var read = ${READ_DOC};
+    var list = ${JSON.stringify(courses)};
+    return Promise.all(list.map(function(c){
+      return fetch(c.href, { credentials: 'same-origin' })
+        .then(function(r){ return r.ok ? r.text() : ''; })
+        .then(function(html){
+          if (!html) return null;
+          var r = read(new DOMParser().parseFromString(html, 'text/html'));
+          /* The page's own script sorts the table once it renders: latest due
+             first, then latest release, ties in page order. A parsed copy is
+             never rendered, so sort it the same way to keep the same rows in
+             the same order as a loaded page. */
+          var t = function(s){ return s ? Date.parse(s) : -Infinity; };
+          r.items.sort(function(a, b){ return (t(b.d) - t(a.d)) || (t(b.o) - t(a.o)); });
+          return r;
+        })
+        .catch(function(){ return null; });
+    })).then(function(r){ return JSON.stringify(r); });
+  })()`;
+}
 
 function waitFor(wc, expr, timeoutMs, everyMs = 700) {
   const deadline = Date.now() + timeoutMs;
@@ -80,23 +109,14 @@ function waitFor(wc, expr, timeoutMs, everyMs = 700) {
   });
 }
 
-function load(win, url) {
-  return new Promise((r) => {
-    win.webContents.once('did-finish-load', r);
-    win.webContents.once('did-fail-load', r);
-    win.loadURL(url);
-  });
-}
+const load = (win, url) => remote.load(win, url);
 
 /**
  * @param {boolean} interactive may we show a sign-in window?
  * @param {(s:string)=>void} say progress reporter
  */
 async function pull(interactive, say = () => {}) {
-  const win = new BrowserWindow({
-    show: false, width: 1100, height: 820, title: 'Gradescope',
-    webPreferences: { partition: PARTITION, contextIsolation: true, nodeIntegration: false, sandbox: true }
-  });
+  const win = remote.open({ width: 1100, height: 820, title: 'Gradescope' });
   const wc = win.webContents;
   const close = () => { if (!win.isDestroyed()) win.destroy(); };
 
@@ -118,8 +138,20 @@ async function pull(interactive, say = () => {}) {
     try { courses = JSON.parse(rawCourses); } catch (e) { /* leave empty */ }
     if (!courses.length) { close(); return { ok: false, error: 'no Gradescope courses found' }; }
 
-    const results = [];
-    for (const c of courses) {
+    let results = [];
+    say('Reading ' + courses.length + ' Gradescope course' + (courses.length === 1 ? '' : 's') + '…');
+    const fast = await wc.executeJavaScript(readAll(courses), true).catch(() => null);
+    let parsedAll = null;
+    try { parsedAll = JSON.parse(fast); } catch (e) { /* fall back below */ }
+    (parsedAll || []).forEach((p, k) => {
+      if (p && p.items && p.items.length) {
+        const c = courses[k];
+        results.push({ code: c.code, name: c.name, href: c.href, items: p.items });
+      }
+    });
+
+    /* If the quick route found nothing, read the old way, one page at a time. */
+    if (!results.length) for (const c of courses) {
       say('Reading ' + (c.code || c.name) + '…');
       await load(win, 'https://www.gradescope.com' + c.href);
       const raw = await wc.executeJavaScript(READ_COURSE, true).catch(() => null);
@@ -139,4 +171,4 @@ async function pull(interactive, say = () => {}) {
   }
 }
 
-module.exports = { pull };
+module.exports = { pull, READ_DOC };
