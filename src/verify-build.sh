@@ -45,7 +45,13 @@ check calendar.js
 check updater.js
 check macupdate.js
 check grabber-return.js
+check remote.js
+check shape.js
 check app/index.html
+check app/fonts/nunito-latin.woff2
+check app/fonts/nunito-latin-ext.woff2
+check app/fonts/hanken-grotesk-latin.woff2
+check app/fonts/hanken-grotesk-latin-ext.woff2
 check build/icon.png
 
 echo "behaviour:"
@@ -55,6 +61,8 @@ contains app/index.html "Refresh from D2L"
 contains calendar.js "calendar/events/myEvents"
 contains updater.js "electron-updater"
 contains macupdate.js "/usr/bin/ditto"
+contains app/index.html "Content-Security-Policy"
+contains remote.js "setPermissionRequestHandler"
 contains updater.js "macupdate"
 
 echo "privacy:"

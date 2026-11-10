@@ -13,6 +13,23 @@ VERSION="${1:-}"
 command -v gh >/dev/null || { echo "need the GitHub CLI: brew install gh"; exit 1; }
 gh auth status >/dev/null 2>&1 || { echo "not signed in: gh auth login"; exit 1; }
 
+# The toolchain gets deleted between releases to reclaim ~540MB, so install it
+# here rather than failing at packaging — after the version bump and push have
+# already happened, which leaves a tagged commit with no release attached.
+# The tests need chrono-node from it too, so this comes first.
+if [ -n "$VERSION" ] && [ ! -d electron/node_modules/electron/dist ]; then
+  echo "==> installing the build toolchain (~540MB, one time)"
+  ( cd electron && npm install --no-audit --no-fund --silent )
+elif [ ! -d electron/node_modules/chrono-node ]; then
+  echo "==> installing what the tests need"
+  ( cd electron && npm install --omit=dev --no-audit --no-fund --silent )
+fi
+
+# Before anything is bumped, built or pushed: the parsing and shaping rules
+# that have broken before. A failure stops the release here.
+echo "==> running the tests"
+node --test 'tests/*.test.js' || { echo "tests failed, nothing released"; exit 1; }
+
 if [ -n "$VERSION" ]; then
   # One source of truth for the version; build.py stamps it into the app and
   # the service worker cache name, and the update banner compares against it.
@@ -31,13 +48,6 @@ python3 build.py
 node src/make_grabbers.js
 
 if [ -n "$VERSION" ]; then
-  # The toolchain gets deleted between releases to reclaim ~540MB, so install it
-  # here rather than failing at packaging — after the version bump and push have
-  # already happened, which leaves a tagged commit with no release attached.
-  if [ ! -d electron/node_modules/electron/dist ]; then
-    echo "==> installing the build toolchain (~540MB, one time)"
-    ( cd electron && npm install --no-audit --no-fund --silent )
-  fi
   # Packaging the Windows exe stamps it via Wine, which is Intel-only and so
   # needs Rosetta. Without it the whole run aborts and takes the Mac build with
   # it, so build only what this machine can actually produce.
@@ -111,7 +121,18 @@ if [ -n "$VERSION" ]; then
 - **Mac (Intel)** — \`Owl-Hours-*-x64.dmg\`
 - **Windows** — \`Owl-Hours-Windows-*-Setup.exe\`
 
-These are unsigned, so the first launch needs a nudge: on macOS right-click the app and choose **Open**; on Windows click **More info → Run anyway**.
+These are unsigned, so the first launch needs a nudge.
+
+**Mac:** open the .dmg and drag Owl Hours into Applications. macOS will say it \"is damaged and can't be opened\" — it isn't, and right-click → Open does not get past that message. Open Terminal and run:
+
+\`\`\`
+xattr -dr com.apple.quarantine \"/Applications/Owl Hours.app\"
+codesign --force --deep --sign - \"/Applications/Owl Hours.app\"
+\`\`\`
+
+Then open it normally.
+
+**Windows:** click **More info → Run anyway**.
 
 You can also just use it in a browser and install it from there — no download needed."
   fi
