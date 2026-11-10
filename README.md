@@ -25,6 +25,8 @@ Safari tab, which discards site data after 7 days of not visiting.
 There are also downloadable desktop builds under Releases if you'd rather have a `.dmg`
 or `.exe`. They carry no Apple or Windows code-signing certificate.
 
+The Mac builds need macOS 13 (Ventura) or later.
+
 On Windows, click **More info → Run anyway**.
 
 On macOS you'll see *"Owl Hours is damaged and can't be opened"*. It isn't damaged, and

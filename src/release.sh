@@ -123,7 +123,7 @@ if [ -n "$VERSION" ]; then
 
 These are unsigned, so the first launch needs a nudge.
 
-**Mac:** open the .dmg and drag Owl Hours into Applications. macOS will say it \"is damaged and can't be opened\" — it isn't, and right-click → Open does not get past that message. Open Terminal and run:
+**Mac** (macOS 13 Ventura or later): open the .dmg and drag Owl Hours into Applications. macOS will say it \"is damaged and can't be opened\" — it isn't, and right-click → Open does not get past that message. Open Terminal and run:
 
 \`\`\`
 xattr -dr com.apple.quarantine \"/Applications/Owl Hours.app\"
