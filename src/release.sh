@@ -81,6 +81,13 @@ if [ -n "$VERSION" ]; then
   fi
   echo "==> checking the package is complete"
   ./src/verify-build.sh || { echo "build incomplete, nothing published"; exit 1; }
+  # Electron 44+ needs macOS 13. Put that in the Mac update feed so a Mac on
+  # macOS 12 is never offered an update that would not open. electron-updater
+  # compares it with os.release(), which on a Mac is the Darwin version:
+  # Darwin 22 is macOS 13.
+  if [ -f dist/latest-mac.yml ] && ! grep -q '^minimumSystemVersion:' dist/latest-mac.yml; then
+    echo "minimumSystemVersion: 22.0.0" >> dist/latest-mac.yml
+  fi
 fi
 
 if ! git diff --quiet || ! git diff --cached --quiet; then
